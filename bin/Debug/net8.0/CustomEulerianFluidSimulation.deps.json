@@ -1,0 +1,68 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v8.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v8.0": {
+      "CustomEulerianFluidSimulation/1.0.0": {
+        "dependencies": {
+          "Raylib-cs": "7.0.2"
+        },
+        "runtime": {
+          "CustomEulerianFluidSimulation.dll": {}
+        }
+      },
+      "Raylib-cs/7.0.2": {
+        "runtime": {
+          "lib/net8.0/Raylib-cs.dll": {
+            "assemblyVersion": "0.0.0.0",
+            "fileVersion": "0.0.0.0"
+          }
+        },
+        "runtimeTargets": {
+          "runtimes/linux-x64/native/libraylib.so": {
+            "rid": "linux-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-arm64/native/libraylib.dylib": {
+            "rid": "osx-arm64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/osx-x64/native/libraylib.dylib": {
+            "rid": "osx-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x64/native/raylib.dll": {
+            "rid": "win-x64",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          },
+          "runtimes/win-x86/native/raylib.dll": {
+            "rid": "win-x86",
+            "assetType": "native",
+            "fileVersion": "0.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CustomEulerianFluidSimulation/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Raylib-cs/7.0.2": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-tpisH03Z9AfdTKFTe7iIA7RNeSaQFE97A+7ApXJUaOHzg2hczBXA1J/2uF7teKHsVXSuGqoV2aHAbaeJJMqulw==",
+      "path": "raylib-cs/7.0.2",
+      "hashPath": "raylib-cs.7.0.2.nupkg.sha512"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "eyMRVl/rdqQ=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\cheme\\.nuget\\packages\\raylib-cs\\7.0.2\\raylib-cs.7.0.2.nupkg.sha512"
+  ],
+  "logs": []
+}
