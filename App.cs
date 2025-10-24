@@ -52,7 +52,7 @@ namespace CustomEulerianFluidSimulation
                 app.Update();
                 // --- Draw ---
                 Raylib.BeginDrawing();
-                Raylib.ClearBackground(Raylib_cs.Color.DarkBlue);
+                Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
 
                 app.Draw();
 
