@@ -7,6 +7,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
+    private readonly int pressureIters = 10;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -19,10 +20,17 @@ class EulerianSimulation
     /// Staggered grid setup (MAC)
     /// </summary>
     private float[,] velocityFieldY;
+    private float[,] divergence; // per cell
+    private float[,] pressure; // per cell
     private Vector2[] bodyForces = new Vector2[1];
+
     // Simulation Constants
     Random random = new Random();
-    private readonly Vector2 g = new Vector2(0, 9.81f); // gravity
+    private readonly Vector2 g = new Vector2(0, -9.81f); // gravity
+
+    // For visualization
+    float minDiv = float.MaxValue;
+    float maxDiv = float.MinValue;
 
     public EulerianSimulation(int width, int height, float cellSize)
     {
@@ -31,11 +39,12 @@ class EulerianSimulation
         this.cellSize = cellSize;
         velocityFieldX = new float[gridWidth + 1, gridHeight];
         velocityFieldY = new float[gridWidth, gridHeight + 1];
-        InitializeVelocityField();
+        divergence = new float[gridWidth, gridHeight];
+        InitializeFields();
 
         bodyForces[0] = g;
     }
-    private void InitializeVelocityField()
+    private void InitializeFields()
     {
         for (int x = 0; x < gridWidth; x++)
         {
@@ -43,37 +52,93 @@ class EulerianSimulation
             {
                 velocityFieldX[x, y] = (float) random.NextDouble();
                 velocityFieldY[x, y] = (float) random.NextDouble();
+                divergence[x, y] = 0f;
             }
         }
     }
     public void Update(float deltaTime)
     {
+        //ApplyBodyForces(deltaTime);
+        //Diffuse() | for viscous later
+        //AdvectVelocity(deltaTime);
+        ComputeDivergence();
+        SolvePoissonPressure(deltaTime);
+        //SolvePoissonPressure(deltatime, pressureIters);
+        //ProjectPressure(deltaTime);
+        // apply boundaries
+
+    }
+    // currently does NOT handle boundaries. Assumes infinite fluid (fix later by generalizing the divergence computation and Poisson solver)
+    private void ProjectPressure(float dt)
+    {
+        throw new NotImplementedException();
+    }
+
+    private void SolvePoissonPressure(float dt) // WROOOOOOOOOOOOOOOOONG
+    {
+        for (int n = 0; n < pressureIters; n++)
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
             {
-                //ApplyBodyForces(x, y, deltaTime);
-                AdvectVelocity(x, y, deltaTime);
+                float div = divergence[x, y];
+                velocityFieldX[x, y] += div * dt * 0.25f;
+                velocityFieldX[x + 1, y] -= div * dt * 0.25f;
+                velocityFieldY[x, y] += div * dt * 0.25f;
+                velocityFieldY[x, y + 1] -= div * dt * 0.25f;
             }
         }
     }
 
-    private void ApplyBodyForces(int x, int y, float dt)
+    public void RandomizeVelocities()
     {
-        foreach (var force in bodyForces)
+        for (int x = 0; x < gridWidth; x++)
         {
-            velocityFieldX[x, y] += force.X * dt;
-            velocityFieldY[x, y] += force.Y * dt;
+            for (int y = 0; y < gridHeight; y++)
+            {
+                velocityFieldX[x, y] = (float)random.NextDouble() - 1;
+                velocityFieldY[x, y] = (float)random.NextDouble() - 1;
+            }
         }
     }
-    // is this even right ?
-    private void AdvectVelocity(int x, int y, float dt)
+
+    private void ApplyBodyForces(float dt)
     {
-        float oldPosX = x - velocityFieldX[x, y] * dt;
-        float oldPosY = y - velocityFieldY[x, y] * dt;
-        Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
-        velocityFieldX[x, y] = oldVel.X * dt;
-        velocityFieldY[x, y] = oldVel.Y * dt;
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                velocityFieldY[x, y] += g.Y * dt;
+            }
+        }
+    }
+
+    private void ComputeDivergence()
+    {
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                divergence[x, y] = (velocityFieldX[x + 1, y] - velocityFieldX[x, y] +
+                        velocityFieldY[x, y + 1] - velocityFieldY[x, y]);
+            }
+        }
+    }
+
+    // is this even right ?
+    private void AdvectVelocity(float dt)
+    {
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                float oldPosX = x - velocityFieldX[x, y] * dt;
+                float oldPosY = y - velocityFieldY[x, y] * dt;
+                Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
+                velocityFieldX[x, y] = oldVel.X * dt;
+                velocityFieldY[x, y] = oldVel.Y * dt;
+            }
+        }
     }
 
     //scrap this slop and make it from scratch (TODO REMAKE THIS)
@@ -116,11 +181,13 @@ class EulerianSimulation
 
     public void Draw()
     {
+        ComputeMinMaxDivergence();
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
+                DrawDivergence(x, y, pos);
                 DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
             }
@@ -131,6 +198,34 @@ class EulerianSimulation
     {
         DrawVelocityVectorX(x, y, pos);
         DrawVelocityVectorY(x, y, pos);
+    }
+
+    private void ComputeMinMaxDivergence()
+    {
+        minDiv = float.MaxValue;
+        maxDiv = float.MinValue;
+
+        for (int x = 0; x < gridWidth; x++)
+            for (int y = 0; y < gridHeight; y++)
+            {
+                float d = divergence[x, y];
+                if (d < minDiv) minDiv = d;
+                if (d > maxDiv) maxDiv = d;
+            }
+    }
+    private void DrawDivergence(int x, int y, Vector2 pos)
+    {
+        float div = divergence[x, y];
+
+        // Normalize divergence to 0–1 range
+        float normalized = (div - minDiv) / (maxDiv - minDiv + 1e-6f); // the addition is epsilon
+
+        // Convert to color: blue = negative, red = positive, gray = near zero
+        // Hue 0° = red, 240° = blue
+        float hue = 240f * (1f - normalized);
+        Raylib_cs.Color color = Raylib.ColorFromHSV(hue, 1f, 1f);
+
+        Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
     }
 
     private void DrawSquareCell(int x, int y, Vector2 pos)
@@ -146,7 +241,7 @@ class EulerianSimulation
         Raylib.DrawLine((int)pos.X, (int)pos.Y,
                         (int)(pos.X + velocityFieldX[x, y] * scale),
                         (int)(pos.Y),
-                        Raylib_cs.Color.White);
+                        Raylib_cs.Color.Black);
     }
     private void DrawVelocityVectorY(int x, int y, Vector2 pos)
     {
@@ -156,6 +251,6 @@ class EulerianSimulation
         Raylib.DrawLine((int)pos.X, (int)pos.Y,
                         (int)(pos.X),
                         (int)(pos.Y + velocityFieldY[x, y] * scale),
-                        Raylib_cs.Color.White);
+                        Raylib_cs.Color.Black);
     }
 }
