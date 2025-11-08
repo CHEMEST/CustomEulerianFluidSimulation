@@ -32,6 +32,9 @@ class EulerianSimulation
     float minDiv = float.MaxValue;
     float maxDiv = float.MinValue;
 
+    float[,] oldPosX;
+    float[,] oldPosY;
+
     public EulerianSimulation(int width, int height, float cellSize)
     {
         this.gridWidth = width;
@@ -40,6 +43,10 @@ class EulerianSimulation
         velocityFieldX = new float[gridWidth + 1, gridHeight];
         velocityFieldY = new float[gridWidth, gridHeight + 1];
         divergence = new float[gridWidth, gridHeight];
+
+        oldPosX = new float[gridWidth + 1, gridHeight];
+        oldPosY = new float[gridWidth, gridHeight + 1];
+
         InitializeFields();
 
         bodyForces[0] = g;
@@ -50,9 +57,23 @@ class EulerianSimulation
         {
             for (int y = 0; y < gridHeight; y++)
             {
-                velocityFieldX[x, y] = (float) random.NextDouble();
-                velocityFieldY[x, y] = (float) random.NextDouble();
+                RandomizeVelocities();
                 divergence[x, y] = 0f;
+
+                oldPosX[x, y] = 0f;
+                oldPosY[x, y] = 0f;
+            }
+        }
+    }
+    public void RandomizeVelocities()
+    {
+        float scale = 10f;
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                velocityFieldX[x, y] = ((float)random.NextDouble()*2 - 1) * scale;
+                velocityFieldY[x, y] = ((float)random.NextDouble()*2 - 1) * scale;
             }
         }
     }
@@ -60,7 +81,8 @@ class EulerianSimulation
     {
         //ApplyBodyForces(deltaTime);
         //Diffuse() | for viscous later
-        //AdvectVelocity(deltaTime);
+        // boundaries
+        AdvectVelocity(deltaTime);
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
         //SolvePoissonPressure(deltatime, pressureIters);
@@ -90,18 +112,6 @@ class EulerianSimulation
         }
     }
 
-    public void RandomizeVelocities()
-    {
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                velocityFieldX[x, y] = (float)random.NextDouble() - 1;
-                velocityFieldY[x, y] = (float)random.NextDouble() - 1;
-            }
-        }
-    }
-
     private void ApplyBodyForces(float dt)
     {
         for (int x = 0; x < gridWidth; x++)
@@ -125,21 +135,27 @@ class EulerianSimulation
         }
     }
 
-    // is this even right ?
     private void AdvectVelocity(float dt)
     {
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
             {
-                float oldPosX = x - velocityFieldX[x, y] * dt;
-                float oldPosY = y - velocityFieldY[x, y] * dt;
-                Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
-                velocityFieldX[x, y] = oldVel.X * dt;
-                velocityFieldY[x, y] = oldVel.Y * dt;
+                // Backtrace to find old position | x,y are indicies, not cooridinates
+                float centerX = (x + 0.5f) * cellSize;
+                float centerY = (y + 0.5f) * cellSize;
+                float oldPosX1 = centerX - velocityFieldX[x, y] * dt;
+                float oldPosY1 = centerY - velocityFieldY[x, y] * dt;
+                oldPosX[x, y] = oldPosX1;
+                oldPosY[x, y] = oldPosY1;
+
+                //Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
+                //velocityFieldX[x, y] = oldVel.X * dt;
+                //velocityFieldY[x, y] = oldVel.Y * dt;
             }
         }
     }
+
 
     //scrap this slop and make it from scratch (TODO REMAKE THIS)
     // Bilinear sampling of velocity fields at (oldPosX, y)
@@ -190,16 +206,52 @@ class EulerianSimulation
                 DrawDivergence(x, y, pos);
                 DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
+
             }
         }
-    }
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                Vector2 pos = new Vector2(x * cellSize, y * cellSize);
+                DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
+            }
+        }
 
+
+    }
+    private void DrawAdvectionVectors(float oldPosX, float oldPosY, Vector2 pos)
+    {
+        float centerX = pos.X + 0.5f * cellSize;
+        float centerY = pos.Y + 0.5f * cellSize;
+
+        // this makes the visualization FALSE. Only use to see direction, not location. Also this is shit code lmfao
+        float scale = 2f;
+        if (scale != 1f)
+        {
+            oldPosX -= 0.5f * cellSize;
+            oldPosY -= 0.5f * cellSize;
+            oldPosX += 0.5f * cellSize * scale;
+            oldPosY += 0.5f * cellSize * scale;
+        }
+
+        // Draw a line to the backtraced (old) position
+        Raylib.DrawLineEx(
+            new Vector2(oldPosX, oldPosY),
+            new Vector2(centerX, centerY),
+            2f,
+            Raylib_cs.Color.White
+        );
+
+        // Mark old & new pos
+        Raylib.DrawCircle((int)centerX, (int)centerY, 3f, Raylib_cs.Color.DarkBlue);
+        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, 3f, Raylib_cs.Color.Red);
+    }
     private void DrawVelocityVectors(int x, int y, Vector2 pos)
     {
         DrawVelocityVectorX(x, y, pos);
         DrawVelocityVectorY(x, y, pos);
     }
-
     private void ComputeMinMaxDivergence()
     {
         minDiv = float.MaxValue;
@@ -227,12 +279,10 @@ class EulerianSimulation
 
         Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
     }
-
     private void DrawSquareCell(int x, int y, Vector2 pos)
     {
         Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.Black);
     }
-
     private void DrawVelocityVectorX(int x, int y, Vector2 pos)
     {
         int scale = 10;

@@ -17,7 +17,7 @@ namespace CustomEulerianFluidSimulation
         // Usefuls
         public static readonly Vector2 center = new Vector2(WindowWidth / 2f, WindowHeight / 2f);
         // Simulation Values
-        private readonly float cellSize = 8f;
+        private readonly float cellSize = 64f;
         private readonly EulerianSimulation simulation;
         private float t = 0f;
 
