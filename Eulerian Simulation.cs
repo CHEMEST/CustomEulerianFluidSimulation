@@ -7,7 +7,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 10;
+    private readonly int pressureIters = 20;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -82,10 +82,10 @@ class EulerianSimulation
         //ApplyBodyForces(deltaTime);
         //Diffuse() | for viscous later
         // boundaries
-        AdvectVelocity(deltaTime);
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
-        //SolvePoissonPressure(deltatime, pressureIters);
+        AdvectVelocity(deltaTime);
+
         //ProjectPressure(deltaTime);
         // apply boundaries
 
