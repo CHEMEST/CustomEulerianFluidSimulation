@@ -7,7 +7,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 20;
+    private readonly int pressureIters = 40;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -22,7 +22,8 @@ class EulerianSimulation
     private float[,] velocityFieldY;
     private float[,] divergence; // per cell
     private float[,] pressure; // per cell
-    private Vector2[] bodyForces = new Vector2[1];
+    private int[,] type; // per cell
+    private Vector2[] bodyForces = new Vector2[1]; // not in use
 
     // Simulation Constants
     Random random = new Random();
@@ -43,6 +44,7 @@ class EulerianSimulation
         velocityFieldX = new float[gridWidth + 1, gridHeight];
         velocityFieldY = new float[gridWidth, gridHeight + 1];
         divergence = new float[gridWidth, gridHeight];
+        type = new int[gridWidth, gridHeight];
 
         oldPosX = new float[gridWidth + 1, gridHeight];
         oldPosY = new float[gridWidth, gridHeight + 1];
@@ -62,6 +64,9 @@ class EulerianSimulation
 
                 oldPosX[x, y] = 0f;
                 oldPosY[x, y] = 0f;
+                // Something is WRONG here
+                type[x, y] = (x == 0 || x == gridWidth || y == 0 || y == gridHeight) ? 0 : 1; // borders are 0, inside is 1
+
             }
         }
     }
@@ -84,32 +89,11 @@ class EulerianSimulation
         // boundaries
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
-        AdvectVelocity(deltaTime);
+        //AdvectVelocity(deltaTime);
 
         //ProjectPressure(deltaTime);
         // apply boundaries
 
-    }
-    // currently does NOT handle boundaries. Assumes infinite fluid (fix later by generalizing the divergence computation and Poisson solver)
-    private void ProjectPressure(float dt)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void SolvePoissonPressure(float dt) // WROOOOOOOOOOOOOOOOONG
-    {
-        for (int n = 0; n < pressureIters; n++)
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                float div = divergence[x, y];
-                velocityFieldX[x, y] += div * dt * 0.25f;
-                velocityFieldX[x + 1, y] -= div * dt * 0.25f;
-                velocityFieldY[x, y] += div * dt * 0.25f;
-                velocityFieldY[x, y + 1] -= div * dt * 0.25f;
-            }
-        }
     }
 
     private void ApplyBodyForces(float dt)
@@ -123,6 +107,29 @@ class EulerianSimulation
         }
     }
 
+    private void SolvePoissonPressure(float dt) // WROOOOOOOOOOOOOOOOONG
+    {
+        for (int n = 0; n < pressureIters; n++)
+            for (int x = 1; x < gridWidth - 1; x++)
+            {
+                for (int y = 1; y < gridHeight - 1; y++)
+                {
+                    float div = divergence[x, y];
+                    float s = type[x + 1, y] + type[x - 1, y] + type[x, y + 1] + type[x, y - 1];
+
+                    velocityFieldX[x, y] += dt * (div * type[x - 1, y] / s);
+                    velocityFieldX[x + 1, y] += dt * (-div * type[x + 1, y] / s);
+                    velocityFieldY[x, y] += dt * (div * type[x, y - 1] / s);
+                    velocityFieldY[x, y + 1] += dt * (-div * type[x, y + 1] / s);
+                }
+            }
+    }
+    // currently does NOT handle boundaries. Assumes infinite fluid (fix later by generalizing the divergence computation and Poisson solver)
+    private void ProjectPressure(float dt)
+    {
+        throw new NotImplementedException();
+    }
+
     private void ComputeDivergence()
     {
         for (int x = 0; x < gridWidth; x++)
@@ -131,6 +138,7 @@ class EulerianSimulation
             {
                 divergence[x, y] = (velocityFieldX[x + 1, y] - velocityFieldX[x, y] +
                         velocityFieldY[x, y + 1] - velocityFieldY[x, y]);
+
             }
         }
     }
@@ -214,7 +222,7 @@ class EulerianSimulation
             for (int y = 0; y < gridHeight; y++)
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
+                //DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
             }
         }
 
@@ -275,7 +283,7 @@ class EulerianSimulation
         // Convert to color: blue = negative, red = positive, gray = near zero
         // Hue 0° = red, 240° = blue
         float hue = 240f * (1f - normalized);
-        Raylib_cs.Color color = Raylib.ColorFromHSV(hue, 1f, 1f);
+        Raylib_cs.Color color = type[x, y] == 1 ? Raylib.ColorFromHSV(hue, 1f, 1f) : Raylib_cs.Color.Black;
 
         Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
     }
@@ -291,7 +299,7 @@ class EulerianSimulation
         Raylib.DrawLine((int)pos.X, (int)pos.Y,
                         (int)(pos.X + velocityFieldX[x, y] * scale),
                         (int)(pos.Y),
-                        Raylib_cs.Color.Black);
+                        velocityFieldX[x, y] > 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
     }
     private void DrawVelocityVectorY(int x, int y, Vector2 pos)
     {
@@ -301,6 +309,6 @@ class EulerianSimulation
         Raylib.DrawLine((int)pos.X, (int)pos.Y,
                         (int)(pos.X),
                         (int)(pos.Y + velocityFieldY[x, y] * scale),
-                        Raylib_cs.Color.Black);
+                        velocityFieldY[x, y] < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
     }
 }
