@@ -65,7 +65,7 @@ class EulerianSimulation
                 oldPosX[x, y] = 0f;
                 oldPosY[x, y] = 0f;
                 // Something is WRONG here
-                type[x, y] = (x == 0 || x == gridWidth || y == 0 || y == gridHeight) ? 0 : 1; // borders are 0, inside is 1
+                type[x, y] = (x == 0 || x == gridWidth - 1 || y == 0 || y == gridHeight - 1) ? 0 : 1; // borders are 0, inside is 1
 
             }
         }
@@ -89,7 +89,7 @@ class EulerianSimulation
         // boundaries
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
-        //AdvectVelocity(deltaTime);
+        AdvectVelocity(deltaTime);
 
         //ProjectPressure(deltaTime);
         // apply boundaries
@@ -107,20 +107,22 @@ class EulerianSimulation
         }
     }
 
-    private void SolvePoissonPressure(float dt) // WROOOOOOOOOOOOOOOOONG
+    private void SolvePoissonPressure(float dt)
     {
         for (int n = 0; n < pressureIters; n++)
-            for (int x = 1; x < gridWidth - 1; x++)
+            for (int x = 0; x < gridWidth; x++)
             {
-                for (int y = 1; y < gridHeight - 1; y++)
+                for (int y = 0; y < gridHeight; y++)
                 {
+                    if (type[x, y] == 0) continue;
                     float div = divergence[x, y];
                     float s = type[x + 1, y] + type[x - 1, y] + type[x, y + 1] + type[x, y - 1];
+                    float o = 1.9f; //overrelaxation
 
-                    velocityFieldX[x, y] += dt * (div * type[x - 1, y] / s);
-                    velocityFieldX[x + 1, y] += dt * (-div * type[x + 1, y] / s);
-                    velocityFieldY[x, y] += dt * (div * type[x, y - 1] / s);
-                    velocityFieldY[x, y + 1] += dt * (-div * type[x, y + 1] / s);
+                    velocityFieldX[x, y] += o * dt * (div * type[x - 1, y] / s);
+                    velocityFieldX[x + 1, y] += o * dt * (-div * type[x + 1, y] / s);
+                    velocityFieldY[x, y] += o * dt * (div * type[x, y - 1] / s);
+                    velocityFieldY[x, y + 1] += o * dt * (-div * type[x, y + 1] / s);
                 }
             }
     }
@@ -150,10 +152,12 @@ class EulerianSimulation
             for (int y = 0; y < gridHeight; y++)
             {
                 // Backtrace to find old position | x,y are indicies, not cooridinates
+
                 float centerX = (x + 0.5f) * cellSize;
                 float centerY = (y + 0.5f) * cellSize;
-                float oldPosX1 = centerX - velocityFieldX[x, y] * dt;
-                float oldPosY1 = centerY - velocityFieldY[x, y] * dt;
+                // the *cellSize feels right and makes sense + makes visualization make sense, but be wary of it
+                float oldPosX1 = centerX - velocityFieldX[x, y] * dt * cellSize;
+                float oldPosY1 = centerY - velocityFieldY[x, y] * dt * cellSize;
                 oldPosX[x, y] = oldPosX1;
                 oldPosY[x, y] = oldPosY1;
 
@@ -212,7 +216,7 @@ class EulerianSimulation
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
                 DrawDivergence(x, y, pos);
-                DrawSquareCell(x, y, pos);
+                //DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
 
             }
@@ -222,7 +226,7 @@ class EulerianSimulation
             for (int y = 0; y < gridHeight; y++)
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                //DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
+                DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
             }
         }
 
@@ -233,15 +237,11 @@ class EulerianSimulation
         float centerX = pos.X + 0.5f * cellSize;
         float centerY = pos.Y + 0.5f * cellSize;
 
-        // this makes the visualization FALSE. Only use to see direction, not location. Also this is shit code lmfao
-        float scale = 2f;
-        if (scale != 1f)
-        {
-            oldPosX -= 0.5f * cellSize;
-            oldPosY -= 0.5f * cellSize;
-            oldPosX += 0.5f * cellSize * scale;
-            oldPosY += 0.5f * cellSize * scale;
-        }
+        // this makes the visualization FALSE. Only use to see direction, not location
+        float scale = 1f;
+
+        oldPosX *= scale;
+        oldPosY *= scale;
 
         // Draw a line to the backtraced (old) position
         Raylib.DrawLineEx(
@@ -257,8 +257,10 @@ class EulerianSimulation
     }
     private void DrawVelocityVectors(int x, int y, Vector2 pos)
     {
-        DrawVelocityVectorX(x, y, pos);
-        DrawVelocityVectorY(x, y, pos);
+        if (type[x, y] == 0) return;
+        //DrawVelocityVectorX(x, y, pos);
+        //DrawVelocityVectorY(x, y, pos);
+        DrawVelocityVector(x, y, pos);
     }
     private void ComputeMinMaxDivergence()
     {
@@ -283,7 +285,7 @@ class EulerianSimulation
         // Convert to color: blue = negative, red = positive, gray = near zero
         // Hue 0° = red, 240° = blue
         float hue = 240f * (1f - normalized);
-        Raylib_cs.Color color = type[x, y] == 1 ? Raylib.ColorFromHSV(hue, 1f, 1f) : Raylib_cs.Color.Black;
+        Raylib_cs.Color color = type[x, y] == 1 ? Raylib.ColorFromHSV(hue, 1f, 0.3f) : Raylib_cs.Color.Black;
 
         Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
     }
@@ -310,5 +312,20 @@ class EulerianSimulation
                         (int)(pos.X),
                         (int)(pos.Y + velocityFieldY[x, y] * scale),
                         velocityFieldY[x, y] < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
+    }
+    private void DrawVelocityVector(int x, int y, Vector2 pos)
+    {
+        int scale = 1;
+        int offset = (int)(cellSize / 2);
+        pos.X += offset;
+        pos.Y += offset;
+        Vector2 endPos = new Vector2(
+            (pos.X + velocityFieldX[x, y] * scale),
+            (pos.Y + velocityFieldY[x, y] * scale));
+
+        Raylib.DrawLineEx(pos,
+                        endPos,
+                        1f,
+                        Raylib_cs.Color.SkyBlue);
     }
 }

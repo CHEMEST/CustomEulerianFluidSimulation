@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "H:\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj": {}
+    "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj": {}
   },
   "projects": {
-    "H:\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj": {
+    "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "H:\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj",
+        "projectUniqueName": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj",
         "projectName": "CustomEulerianFluidSimulation",
-        "projectPath": "H:\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj",
-        "packagesPath": "C:\\Users\\alch1565\\.nuget\\packages\\",
-        "outputPath": "H:\\C#\\CustomEulerianFluidSimulation\\obj\\",
+        "projectPath": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\CustomEulerianFluidSimulation.csproj",
+        "packagesPath": "C:\\Users\\cheme\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\alch1565\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\cheme\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,6 +26,7 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -44,7 +45,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "9.0.300"
+        "SdkAnalysisLevel": "9.0.200"
       },
       "frameworks": {
         "net8.0": {
@@ -71,7 +72,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.301/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.200/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
