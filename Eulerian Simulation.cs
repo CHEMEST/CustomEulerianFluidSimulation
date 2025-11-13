@@ -7,7 +7,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 40;
+    private readonly int pressureIters = 10;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -64,7 +64,6 @@ class EulerianSimulation
 
                 oldPosX[x, y] = 0f;
                 oldPosY[x, y] = 0f;
-                // Something is WRONG here
                 type[x, y] = (x == 0 || x == gridWidth - 1 || y == 0 || y == gridHeight - 1) ? 0 : 1; // borders are 0, inside is 1
 
             }
@@ -218,7 +217,6 @@ class EulerianSimulation
                 DrawDivergence(x, y, pos);
                 //DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
-
             }
         }
         for (int x = 0; x < gridWidth; x++)
@@ -252,8 +250,9 @@ class EulerianSimulation
         );
 
         // Mark old & new pos
-        Raylib.DrawCircle((int)centerX, (int)centerY, 3f, Raylib_cs.Color.DarkBlue);
-        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, 3f, Raylib_cs.Color.Red);
+        float size = (cellSize)/32;
+        Raylib.DrawCircle((int)centerX, (int)centerY, size, Raylib_cs.Color.DarkBlue);
+        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, size, Raylib_cs.Color.Red);
     }
     private void DrawVelocityVectors(int x, int y, Vector2 pos)
     {
