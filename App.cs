@@ -17,7 +17,7 @@ namespace CustomEulerianFluidSimulation
         // Usefuls
         public static readonly Vector2 center = new Vector2(WindowWidth / 2f, WindowHeight / 2f);
         // Simulation Values
-        private readonly float cellSize = 12f;
+        private readonly float cellSize = 32f;
         private readonly EulerianSimulation simulation;
         private float t = 0f;
 
@@ -49,7 +49,7 @@ namespace CustomEulerianFluidSimulation
             while (!Raylib.WindowShouldClose())
             { 
                 // --- Update ---
-                //app.Update();
+                app.Update();
                 if (Raylib.IsKeyPressed(KeyboardKey.R))
                 {
                     app.simulation.RandomizeVelocities();

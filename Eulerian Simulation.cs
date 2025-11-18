@@ -7,7 +7,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 10;
+    private readonly int pressureIters = 30;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -27,14 +27,14 @@ class EulerianSimulation
 
     // Simulation Constants
     Random random = new Random();
-    private readonly Vector2 g = new Vector2(0, -9.81f); // gravity
+    private readonly Vector2 g = new Vector2(0, 9.81f); // gravity
 
     // For visualization
     float minDiv = float.MaxValue;
     float maxDiv = float.MinValue;
 
-    float[,] oldPosX;
-    float[,] oldPosY;
+    float[,] backtracedPosX;
+    float[,] backtracedPosY;
 
     public EulerianSimulation(int width, int height, float cellSize)
     {
@@ -46,8 +46,8 @@ class EulerianSimulation
         divergence = new float[gridWidth, gridHeight];
         type = new int[gridWidth, gridHeight];
 
-        oldPosX = new float[gridWidth + 1, gridHeight];
-        oldPosY = new float[gridWidth, gridHeight + 1];
+        backtracedPosX = new float[gridWidth + 1, gridHeight];
+        backtracedPosY = new float[gridWidth, gridHeight + 1];
 
         InitializeFields();
 
@@ -62,8 +62,8 @@ class EulerianSimulation
                 RandomizeVelocities();
                 divergence[x, y] = 0f;
 
-                oldPosX[x, y] = 0f;
-                oldPosY[x, y] = 0f;
+                backtracedPosX[x, y] = 0f;
+                backtracedPosY[x, y] = 0f;
                 type[x, y] = (x == 0 || x == gridWidth - 1 || y == 0 || y == gridHeight - 1) ? 0 : 1; // borders are 0, inside is 1
 
             }
@@ -155,55 +155,39 @@ class EulerianSimulation
                 float centerX = (x + 0.5f) * cellSize;
                 float centerY = (y + 0.5f) * cellSize;
                 // the *cellSize feels right and makes sense + makes visualization make sense, but be wary of it
-                float oldPosX1 = centerX - velocityFieldX[x, y] * dt * cellSize;
-                float oldPosY1 = centerY - velocityFieldY[x, y] * dt * cellSize;
-                oldPosX[x, y] = oldPosX1;
-                oldPosY[x, y] = oldPosY1;
+                float oldPosX = centerX - velocityFieldX[x, y] * dt * cellSize;
+                float oldPosY = centerY - velocityFieldY[x, y] * dt * cellSize;
+                backtracedPosX[x, y] = oldPosX;
+                backtracedPosY[x, y] = oldPosY;
 
-                //Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
-                //velocityFieldX[x, y] = oldVel.X * dt;
-                //velocityFieldY[x, y] = oldVel.Y * dt;
+                Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
+                // *dt?
+                velocityFieldX[x, y] = oldVel.X;
+                velocityFieldY[x, y] = oldVel.Y;
             }
         }
     }
 
 
-    //scrap this slop and make it from scratch (TODO REMAKE THIS)
     // Bilinear sampling of velocity fields at (oldPosX, y)
+    // I followed a formula for this one I don't really understand how it works beyond the concept of bilinear interpolation; double check this later
     private Vector2 BilinearSampleVelocity(float oldPosX, float oldPosY)
     {
         // Clamp coordinates to valid range
-        float x = Math.Clamp(oldPosX, 0, gridWidth - 1);
-        float y = Math.Clamp(oldPosY, 0, gridHeight - 1);
+        float x = Math.Clamp(oldPosX, 1, gridWidth - 2);
+        float y = Math.Clamp(oldPosY, 1, gridHeight - 2);
 
-        // Calc the change in cords
-        int x0 = (int)Math.Floor(x);
-        int x1 = Math.Min(x0 + 1, gridWidth - 1);
-        int y0 = (int)Math.Floor(y);
-        int y1 = Math.Min(y0 + 1, gridHeight - 1);
+        float w00 = 1 - x / cellSize;
+        float w10 = 1 - y / cellSize;
+        float w01 = x / cellSize;
+        float w11 = y / cellSize;
 
-        float tx = x - x0;
-        float ty = y - y0;
+        float x1 = velocityFieldX[(int)x, (int)y] * w00 * w10;
 
-        // Sample velocityFieldX (staggered: [gridWidth+1, gridHeight])
-        float vx00 = velocityFieldX[x0, y0];
-        float vx10 = velocityFieldX[x1, y0];
-        float vx01 = velocityFieldX[x0, y1];
-        float vx11 = velocityFieldX[x1, y1];
-        float vx0 = vx00 * (1 - tx) + vx10 * tx;
-        float vx1 = vx01 * (1 - tx) + vx11 * tx;
-        float vx = vx0 * (1 - ty) + vx1 * ty;
+        float y1 = velocityFieldY[(int)x, (int)y] * w00 * w10;
 
-        // Sample velocityFieldY (staggered: [gridWidth, gridHeight+1])
-        float vy00 = velocityFieldY[x0, y0];
-        float vy10 = velocityFieldY[x1, y0];
-        float vy01 = velocityFieldY[x0, y1];
-        float vy11 = velocityFieldY[x1, y1];
-        float vy0 = vy00 * (1 - tx) + vy10 * tx;
-        float vy1 = vy01 * (1 - tx) + vy11 * tx;
-        float vy = vy0 * (1 - ty) + vy1 * ty;
-
-        return new Vector2(vx, vy);
+        //... continue this for all terms and combine
+        return new Vector2(x1, y1);
     }
 
     public void Draw()
@@ -215,7 +199,7 @@ class EulerianSimulation
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
                 DrawDivergence(x, y, pos);
-                //DrawSquareCell(x, y, pos);
+                DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
             }
         }
@@ -224,7 +208,7 @@ class EulerianSimulation
             for (int y = 0; y < gridHeight; y++)
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                DrawAdvectionVectors(oldPosX[x, y], oldPosY[x, y], pos);
+                DrawAdvectionVectors(backtracedPosX[x, y], backtracedPosY[x, y], pos);
             }
         }
 
