@@ -161,7 +161,7 @@ class EulerianSimulation
                 backtracedPosY[x, y] = oldPosY;
 
                 Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
-                // *dt?
+                
                 velocityFieldX[x, y] = oldVel.X;
                 velocityFieldY[x, y] = oldVel.Y;
             }
@@ -170,24 +170,25 @@ class EulerianSimulation
 
 
     // Bilinear sampling of velocity fields at (oldPosX, y)
-    // I followed a formula for this one I don't really understand how it works beyond the concept of bilinear interpolation; double check this later
-    private Vector2 BilinearSampleVelocity(float oldPosX, float oldPosY)
+    //input is world coordinates
+    // Actively working on derivation
+    private Vector2 BilinearSampleVelocity(float px, float py)
     {
-        // Clamp coordinates to valid range
-        float x = Math.Clamp(oldPosX, 1, gridWidth - 2);
-        float y = Math.Clamp(oldPosY, 1, gridHeight - 2);
+        // find nearest velocity point to the input position (left-most center of the cell) (i, j)
+        int ix = (int)Math.Floor(px / cellSize);
+        int iy = (int)Math.Floor(py / cellSize);
 
-        float w00 = 1 - x / cellSize;
-        float w10 = 1 - y / cellSize;
-        float w01 = x / cellSize;
-        float w11 = y / cellSize;
+        float px0 = ix * cellSize;
+        float px1 = (ix + 1) * cellSize;
 
-        float x1 = velocityFieldX[(int)x, (int)y] * w00 * w10;
 
-        float y1 = velocityFieldY[(int)x, (int)y] * w00 * w10;
+        float x1 = velocityFieldX[(int)ix, (int)iy];
+        float x2 = velocityFieldX[(int)ix + 1, (int)iy];
+
+        float xInterp = (px - );
 
         //... continue this for all terms and combine
-        return new Vector2(x1, y1);
+        return Vector2.Zero;
     }
 
     public void Draw()
