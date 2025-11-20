@@ -178,17 +178,19 @@ class EulerianSimulation
         int ix = (int)Math.Floor(px / cellSize);
         int iy = (int)Math.Floor(py / cellSize);
 
+        // positions of the left and right cell velocity vectors (i,j; i+1,j)
         float px0 = ix * cellSize;
         float px1 = (ix + 1) * cellSize;
 
+        // velocity values at those points
+        float vx0 = velocityFieldX[(int)ix, (int)iy];
+        float vx1 = velocityFieldX[(int)ix + 1, (int)iy];
 
-        float x1 = velocityFieldX[(int)ix, (int)iy];
-        float x2 = velocityFieldX[(int)ix + 1, (int)iy];
+        // linear interpolation in x direction
+        // V(C) = (C-A) * (V(B)-V(A))/(B-A) + V(A)
+        float vxInterp = (px - px0) * (vx1 - vx0)/(px1 - px0) + vx0;
 
-        float xInterp = (px - );
-
-        //... continue this for all terms and combine
-        return Vector2.Zero;
+        return new Vector2(vxInterp, 0);
     }
 
     public void Draw()
