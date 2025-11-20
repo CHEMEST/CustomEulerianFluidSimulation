@@ -33,8 +33,9 @@ class EulerianSimulation
     float minDiv = float.MaxValue;
     float maxDiv = float.MinValue;
 
-    float[,] backtracedPosX;
-    float[,] backtracedPosY;
+    // 0: position ; 1,2: velocity (x, y)
+    Vector3[,] backtracedDataX;
+    Vector3[,] backtracedDataY;
 
     public EulerianSimulation(int width, int height, float cellSize)
     {
@@ -46,8 +47,8 @@ class EulerianSimulation
         divergence = new float[gridWidth, gridHeight];
         type = new int[gridWidth, gridHeight];
 
-        backtracedPosX = new float[gridWidth + 1, gridHeight];
-        backtracedPosY = new float[gridWidth, gridHeight + 1];
+        backtracedDataX = new Vector3[gridWidth + 1, gridHeight];
+        backtracedDataY = new Vector3[gridWidth, gridHeight + 1];
 
         InitializeFields();
 
@@ -62,8 +63,8 @@ class EulerianSimulation
                 RandomizeVelocities();
                 divergence[x, y] = 0f;
 
-                backtracedPosX[x, y] = 0f;
-                backtracedPosY[x, y] = 0f;
+                backtracedDataX[x, y] = Vector3.Zero;
+                backtracedDataY[x, y] = Vector3.Zero;
                 type[x, y] = (x == 0 || x == gridWidth - 1 || y == 0 || y == gridHeight - 1) ? 0 : 1; // borders are 0, inside is 1
 
             }
@@ -151,17 +152,17 @@ class EulerianSimulation
             for (int y = 0; y < gridHeight; y++)
             {
                 // Backtrace to find old position | x,y are indicies, not cooridinates
-
+                if (type[x, y] == 0) continue;
                 float centerX = (x + 0.5f) * cellSize;
                 float centerY = (y + 0.5f) * cellSize;
                 // the *cellSize feels right and makes sense + makes visualization make sense, but be wary of it
                 float oldPosX = centerX - velocityFieldX[x, y] * dt * cellSize;
                 float oldPosY = centerY - velocityFieldY[x, y] * dt * cellSize;
-                backtracedPosX[x, y] = oldPosX;
-                backtracedPosY[x, y] = oldPosY;
 
                 Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
-                
+                backtracedDataX[x, y] = new Vector3(oldPosX, oldVel.X, oldVel.Y);
+                backtracedDataY[x, y] = new Vector3(oldPosY, oldVel.X, oldVel.Y);
+
                 velocityFieldX[x, y] = oldVel.X;
                 velocityFieldY[x, y] = oldVel.Y;
             }
@@ -181,16 +182,21 @@ class EulerianSimulation
         // positions of the left and right cell velocity vectors (i,j; i+1,j)
         float px0 = ix * cellSize;
         float px1 = (ix + 1) * cellSize;
+        float py0 = iy * cellSize;
+        float py1 = (iy + 1) * cellSize;
 
         // velocity values at those points
         float vx0 = velocityFieldX[(int)ix, (int)iy];
         float vx1 = velocityFieldX[(int)ix + 1, (int)iy];
+        float vy0 = velocityFieldY[(int)ix, (int)iy];
+        float vy1 = velocityFieldY[(int)ix, (int)iy + 1];
 
         // linear interpolation in x direction
         // V(C) = (C-A) * (V(B)-V(A))/(B-A) + V(A)
         float vxInterp = (px - px0) * (vx1 - vx0)/(px1 - px0) + vx0;
+        float vyInterp = (py - py0) * (vy1 - vy0) / (py1 - py0) + vy0;
 
-        return new Vector2(vxInterp, 0);
+        return new Vector2(vxInterp, vyInterp);
     }
 
     public void Draw()
@@ -210,15 +216,17 @@ class EulerianSimulation
         {
             for (int y = 0; y < gridHeight; y++)
             {
+                if (type[x, y] == 0) continue;
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                DrawAdvectionVectors(backtracedPosX[x, y], backtracedPosY[x, y], pos);
+                DrawAdvectionVectors(x ,y, pos);
             }
         }
-
-
     }
-    private void DrawAdvectionVectors(float oldPosX, float oldPosY, Vector2 pos)
+    private void DrawAdvectionVectors(int x, int y, Vector2 pos)
     {
+        float oldPosX = backtracedDataX[x, y].X;
+        float oldPosY = backtracedDataY[x, y].X;
+
         float centerX = pos.X + 0.5f * cellSize;
         float centerY = pos.Y + 0.5f * cellSize;
 
@@ -228,6 +236,11 @@ class EulerianSimulation
         oldPosX *= scale;
         oldPosY *= scale;
 
+        // Mark old & new pos
+        float size = (cellSize) / 32;
+        Raylib.DrawCircle((int)centerX, (int)centerY, size, Raylib_cs.Color.DarkBlue);
+        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, size, Raylib_cs.Color.Red);
+
         // Draw a line to the backtraced (old) position
         Raylib.DrawLineEx(
             new Vector2(oldPosX, oldPosY),
@@ -236,16 +249,18 @@ class EulerianSimulation
             Raylib_cs.Color.White
         );
 
-        // Mark old & new pos
-        float size = (cellSize)/32;
-        Raylib.DrawCircle((int)centerX, (int)centerY, size, Raylib_cs.Color.DarkBlue);
-        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, size, Raylib_cs.Color.Red);
+        Raylib.DrawLineEx(
+            new Vector2(oldPosX, oldPosY),
+            new Vector2(backtracedDataX[x, y].Y + oldPosX, backtracedDataX[x, y].Z + oldPosY),
+            2f,
+            Raylib_cs.Color.Violet
+        );
     }
     private void DrawVelocityVectors(int x, int y, Vector2 pos)
     {
         if (type[x, y] == 0) return;
-        //DrawVelocityVectorX(x, y, pos);
-        //DrawVelocityVectorY(x, y, pos);
+        DrawVelocityVectorX(x, y, pos);
+        DrawVelocityVectorY(x, y, pos);
         DrawVelocityVector(x, y, pos);
     }
     private void ComputeMinMaxDivergence()

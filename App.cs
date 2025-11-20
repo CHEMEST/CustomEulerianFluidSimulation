@@ -12,8 +12,8 @@ namespace CustomEulerianFluidSimulation
     class App
     {
         // Core Constants
-        private const int WindowWidth = 960;
-        private const int WindowHeight = 540;
+        private const int WindowWidth = 600;
+        private const int WindowHeight = 600;
         // Usefuls
         public static readonly Vector2 center = new Vector2(WindowWidth / 2f, WindowHeight / 2f);
         // Simulation Values
@@ -59,8 +59,8 @@ namespace CustomEulerianFluidSimulation
                     app.Update();
                 }
 
-                // --- Draw ---
-                Raylib.BeginDrawing();
+                    // --- Draw ---
+                    Raylib.BeginDrawing();
                 Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
 
                 app.Draw();
