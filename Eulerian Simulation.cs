@@ -86,6 +86,7 @@ class EulerianSimulation
                 velocityFieldY[x, y] = ((float)random.NextDouble()*2 - 1) * scale;
             }
         }
+        ComputeDivergence();
     }
     public void Update(float deltaTime)
     {
@@ -95,7 +96,7 @@ class EulerianSimulation
         // boundaries
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
-        //AdvectVelocity(deltaTime);
+        AdvectVelocity(deltaTime);
 
         //ProjectPressure(deltaTime);
         // apply boundaries
@@ -210,7 +211,7 @@ class EulerianSimulation
     // #######
     public void Draw()
     {
-        ComputeAndDrawStatistics();
+        //ComputeAndDrawStatistics();
 
         ComputeMinMaxDivergence();
 
@@ -220,7 +221,7 @@ class EulerianSimulation
             {
                 Vector2 pos = new Vector2(x * cellSize, y * cellSize);
                 DrawDivergence(x, y, pos);
-                DrawSquareCell(x, y, pos);
+                //DrawSquareCell(x, y, pos);
                 DrawVelocityVectors(x, y, pos);
             }
         }
@@ -234,25 +235,25 @@ class EulerianSimulation
             }
         }
     }
-    private void ComputeAndDrawStatistics()
-    {
-        // Compute
-        maxSpeed = velocityFieldX.Max();
+    //private void ComputeAndDrawStatistics()
+    //{
+    //    // Compute
+    //    maxSpeed = velocityFieldX.Max();
 
-        // Draw
-        int d = 10;
-        void Stat(string label, float val)
-        {
-            Raylib.DrawText($"{label}: {val:E3}", 10, 10, 16, Raylib_cs.Color.White);
-            d += 18;
-        }
-        Stat("dt", dt);
-        Stat("max|u|", maxSpeed);
-        //Stat("maxDivBefore", maxDivBefore);
-        //Stat("maxDivAfter", maxDivAfter);
-        //Stat("L2DivAfter", l2DivAfter);
-        //Stat("mass", totalDyeMass);
-    }
+    //    // Draw
+    //    int d = 10;
+    //    void Stat(string label, float val)
+    //    {
+    //        Raylib.DrawText($"{label}: {val:E3}", 10, 10, 16, Raylib_cs.Color.White);
+    //        d += 18;
+    //    }
+    //    Stat("dt", dt);
+    //    Stat("max|u|", maxSpeed);
+    //    //Stat("maxDivBefore", maxDivBefore);
+    //    //Stat("maxDivAfter", maxDivAfter);
+    //    //Stat("L2DivAfter", l2DivAfter);
+    //    //Stat("mass", totalDyeMass);
+    //}
 
     private void DrawAdvectionVectors(int x, int y, Vector2 pos)
     {
@@ -291,8 +292,8 @@ class EulerianSimulation
     private void DrawVelocityVectors(int x, int y, Vector2 pos)
     {
         if (type[x, y] == 0) return;
-        DrawVelocityVectorX(x, y, pos);
-        DrawVelocityVectorY(x, y, pos);
+        //DrawVelocityVectorX(x, y, pos);
+        //DrawVelocityVectorY(x, y, pos);
         DrawVelocityVector(x, y, pos);
     }
     private void ComputeMinMaxDivergence()
