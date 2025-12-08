@@ -1,13 +1,14 @@
 ﻿using Raylib_cs;
 using System.Drawing;
 using System.Numerics;
+using System.Linq;
 
 class EulerianSimulation
 {
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 30;
+    private readonly int pressureIters = 60;
     /// <summary>
     /// cell size in pixels
     /// </summary>
@@ -29,13 +30,17 @@ class EulerianSimulation
     Random random = new Random();
     private readonly Vector2 g = new Vector2(0, 9.81f); // gravity
 
-    // For visualization
-    float minDiv = float.MaxValue;
-    float maxDiv = float.MinValue;
-
     // 0: position ; 1,2: velocity (x, y)
     Vector3[,] backtracedDataX;
     Vector3[,] backtracedDataY;
+
+    // Statistics | Debug
+    public float dt = 0f;
+    public float maxSpeed = 0f;
+    public float minDiv = 0f;
+    public float maxDiv = 0f;
+    public float l2DivAfter = 0f;
+    public float totalDyeMass = 0f;
 
     public EulerianSimulation(int width, int height, float cellSize)
     {
@@ -84,12 +89,13 @@ class EulerianSimulation
     }
     public void Update(float deltaTime)
     {
+        //CalculateCFLCondition
         //ApplyBodyForces(deltaTime);
         //Diffuse() | for viscous later
         // boundaries
         ComputeDivergence();
         SolvePoissonPressure(deltaTime);
-        AdvectVelocity(deltaTime);
+        //AdvectVelocity(deltaTime);
 
         //ProjectPressure(deltaTime);
         // apply boundaries
@@ -186,10 +192,10 @@ class EulerianSimulation
         float py1 = (iy + 1) * cellSize;
 
         // velocity values at those points
-        float vx0 = velocityFieldX[(int)ix, (int)iy];
-        float vx1 = velocityFieldX[(int)ix + 1, (int)iy];
-        float vy0 = velocityFieldY[(int)ix, (int)iy];
-        float vy1 = velocityFieldY[(int)ix, (int)iy + 1];
+        float vx0 = velocityFieldX[ix, iy];
+        float vx1 = velocityFieldX[ix + 1, iy];
+        float vy0 = velocityFieldY[ix, iy];
+        float vy1 = velocityFieldY[ix, iy + 1];
 
         // linear interpolation in x direction
         // V(C) = (C-A) * (V(B)-V(A))/(B-A) + V(A)
@@ -199,9 +205,15 @@ class EulerianSimulation
         return new Vector2(vxInterp, vyInterp);
     }
 
+    // #######
+    // DRAWING
+    // #######
     public void Draw()
     {
+        ComputeAndDrawStatistics();
+
         ComputeMinMaxDivergence();
+
         for (int x = 0; x < gridWidth; x++)
         {
             for (int y = 0; y < gridHeight; y++)
@@ -222,6 +234,26 @@ class EulerianSimulation
             }
         }
     }
+    private void ComputeAndDrawStatistics()
+    {
+        // Compute
+        maxSpeed = velocityFieldX.Max();
+
+        // Draw
+        int d = 10;
+        void Stat(string label, float val)
+        {
+            Raylib.DrawText($"{label}: {val:E3}", 10, 10, 16, Raylib_cs.Color.White);
+            d += 18;
+        }
+        Stat("dt", dt);
+        Stat("max|u|", maxSpeed);
+        //Stat("maxDivBefore", maxDivBefore);
+        //Stat("maxDivAfter", maxDivAfter);
+        //Stat("L2DivAfter", l2DivAfter);
+        //Stat("mass", totalDyeMass);
+    }
+
     private void DrawAdvectionVectors(int x, int y, Vector2 pos)
     {
         float oldPosX = backtracedDataX[x, y].X;

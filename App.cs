@@ -49,7 +49,7 @@ namespace CustomEulerianFluidSimulation
             while (!Raylib.WindowShouldClose())
             { 
                 // --- Update ---
-                app.Update();
+                //app.Update();
                 if (Raylib.IsKeyPressed(KeyboardKey.R))
                 {
                     app.simulation.RandomizeVelocities();
@@ -59,8 +59,8 @@ namespace CustomEulerianFluidSimulation
                     app.Update();
                 }
 
-                    // --- Draw ---
-                    Raylib.BeginDrawing();
+                // --- Draw ---
+                Raylib.BeginDrawing();
                 Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
 
                 app.Draw();
