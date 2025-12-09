@@ -65,15 +65,15 @@ class EulerianSimulation
         {
             for (int y = 0; y < gridHeight; y++)
             {
-                RandomizeVelocities();
                 divergence[x, y] = 0f;
-
                 backtracedDataX[x, y] = Vector3.Zero;
                 backtracedDataY[x, y] = Vector3.Zero;
                 type[x, y] = (x == 0 || x == gridWidth - 1 || y == 0 || y == gridHeight - 1) ? 0 : 1; // borders are 0, inside is 1
 
             }
         }
+        RandomizeVelocities();
+
     }
     public void RandomizeVelocities()
     {

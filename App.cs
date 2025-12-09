@@ -20,6 +20,7 @@ namespace CustomEulerianFluidSimulation
         private readonly float cellSize = 32f;
         private readonly EulerianSimulation simulation;
         private float t = 0f;
+        private static bool active = false;
 
         public App()
         {
@@ -49,18 +50,21 @@ namespace CustomEulerianFluidSimulation
             while (!Raylib.WindowShouldClose())
             { 
                 // --- Update ---
-                //app.Update();
+                if (active) app.Update();
                 if (Raylib.IsKeyPressed(KeyboardKey.R))
                 {
                     app.simulation.RandomizeVelocities();
                 }
-                else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
                 {
                     app.Update();
+                } else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                {
+                    active = !active;
                 }
 
-                // --- Draw ---
-                Raylib.BeginDrawing();
+                    // --- Draw ---
+                    Raylib.BeginDrawing();
                 Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
 
                 app.Draw();
