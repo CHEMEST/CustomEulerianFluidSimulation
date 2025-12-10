@@ -158,15 +158,13 @@ class EulerianSimulation
         {
             for (int y = 0; y < gridHeight; y++)
             {
-                // Backtrace to find old position | x,y are indicies, not cooridinates
+                // Backtrace to find old position | x,y are indicies/world cords, not screen cords
                 if (type[x, y] == 0) continue;
-                float centerX = (x + 0.5f) * cellSize;
-                float centerY = (y + 0.5f) * cellSize;
-                // the *cellSize feels right and makes sense + makes visualization make sense, but be wary of it
-                float oldPosX = centerX - velocityFieldX[x, y] * dt * cellSize;
-                float oldPosY = centerY - velocityFieldY[x, y] * dt * cellSize;
+                // center of the cell in world coordinates, not screen.
+                float oldPosX = x + 0.5f - velocityFieldX[x, y] * dt / cellSize;
+                float oldPosY = y + 0.5f - velocityFieldY[x, y] * dt / cellSize;
 
-                Vector2 oldVel = BilinearSampleVelocity(oldPosX, oldPosY);
+                Vector2 oldVel = SampleMACVelocity(oldPosX, oldPosY);
                 backtracedDataX[x, y] = new Vector3(oldPosX, oldVel.X, oldVel.Y);
                 backtracedDataY[x, y] = new Vector3(oldPosY, oldVel.X, oldVel.Y);
 
@@ -177,37 +175,78 @@ class EulerianSimulation
     }
 
 
-    // Bilinear sampling of velocity fields at (oldPosX, y)
-    //input is world coordinates
-    // Actively working on derivation
-    private Vector2 BilinearSampleVelocity(float px, float py)
+    // Bilinear sampling of velocity fields at any arbitrary x,y position
+    // Needed since we have a discrete grid and almost never get a perfect cordinate in backtrace
+    // input is world coordinates
+    // Actively working on derivation (I get it but I need to load in a bunch of info each time I try and explain it so I want a stronger interpretation)
+    public Vector2 SampleMACVelocity(float x, float y)
     {
-        // find nearest velocity point to the input position (left-most center of the cell) (i, j)
-        int ix = (int)Math.Floor(px / cellSize);
-        int iy = (int)Math.Floor(py / cellSize);
+        float u = SampleU(x, y);
+        float v = SampleV(x, y);
+        return new Vector2(u, v);
+    }
+    private float SampleU(float x, float y)
+    {
+        // shift into u-grid coordinates: u lives at (i, j+0.5)
+        float yu = y - 0.5f;
 
-        // positions of the left and right cell velocity vectors (i,j; i+1,j)
-        float px0 = ix * cellSize;
-        float px1 = (ix + 1) * cellSize;
-        float py0 = iy * cellSize;
-        float py1 = (iy + 1) * cellSize;
+        int i0 = (int)MathF.Floor(x);
+        int j0 = (int)MathF.Floor(yu);
 
-        // velocity values at those points
-        float vx0 = velocityFieldX[ix, iy];
-        float vx1 = velocityFieldX[ix + 1, iy];
-        float vy0 = velocityFieldY[ix, iy];
-        float vy1 = velocityFieldY[ix, iy + 1];
+        int i1 = i0 + 1;
+        int j1 = j0 + 1;
 
-        // linear interpolation in x direction
-        // V(C) = (C-A) * (V(B)-V(A))/(B-A) + V(A)
-        float vxInterp = (px - px0) * (vx1 - vx0)/(px1 - px0) + vx0;
-        float vyInterp = (py - py0) * (vy1 - vy0) / (py1 - py0) + vy0;
+        // clamp (sizeU = gridWidth+1, gridHeight)
+        i0 = Math.Clamp(i0, 0, gridWidth);
+        i1 = Math.Clamp(i1, 0, gridWidth);
+        j0 = Math.Clamp(j0, 0, gridHeight - 1);
+        j1 = Math.Clamp(j1, 0, gridHeight - 1);
 
-        return new Vector2(vxInterp, vyInterp);
+        float sx = x - i0;
+        float sy = yu - j0;
+
+        float v00 = velocityFieldX[i0, j0];
+        float v10 = velocityFieldX[i1, j0];
+        float v01 = velocityFieldX[i0, j1];
+        float v11 = velocityFieldX[i1, j1];
+
+        float vx0 = v00 + sx * (v10 - v00);
+        float vx1 = v01 + sx * (v11 - v01);
+        return vx0 + sy * (vx1 - vx0);
+    }
+    private float SampleV(float x, float y)
+    {
+        float xv = x - 0.5f;
+
+        int i0 = (int)MathF.Floor(xv);
+        int j0 = (int)MathF.Floor(y);
+
+        int i1 = i0 + 1;
+        int j1 = j0 + 1;
+
+        // clamp
+        i0 = Math.Clamp(i0, 0, gridWidth - 1);
+        i1 = Math.Clamp(i1, 0, gridWidth - 1);
+        j0 = Math.Clamp(j0, 0, gridHeight);
+        j1 = Math.Clamp(j1, 0, gridHeight);
+
+        float sx = xv - i0;
+        float sy = y - j0;
+
+        float v00 = velocityFieldY[i0, j0];
+        float v10 = velocityFieldY[i1, j0];
+        float v01 = velocityFieldY[i0, j1];
+        float v11 = velocityFieldY[i1, j1];
+
+        float vy0 = v00 + sx * (v10 - v00);
+        float vy1 = v01 + sx * (v11 - v01);
+        return vy0 + sy * (vy1 - vy0);
     }
 
+
+
     // #######
-    // DRAWING
+    // DRAWING (alot of this will be wrong...cause I need to fix world/screen coords)
     // #######
     public void Draw()
     {
@@ -257,8 +296,8 @@ class EulerianSimulation
 
     private void DrawAdvectionVectors(int x, int y, Vector2 pos)
     {
-        float oldPosX = backtracedDataX[x, y].X;
-        float oldPosY = backtracedDataY[x, y].X;
+        float oldPosX = backtracedDataX[x, y].X * cellSize;
+        float oldPosY = backtracedDataY[x, y].X * cellSize;
 
         float centerX = pos.X + 0.5f * cellSize;
         float centerY = pos.Y + 0.5f * cellSize;
