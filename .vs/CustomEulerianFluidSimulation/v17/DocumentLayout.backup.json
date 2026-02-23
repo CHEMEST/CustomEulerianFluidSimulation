@@ -28,10 +28,11 @@
               "RelativeDocumentMoniker": "App.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\App.cs",
               "RelativeToolTip": "App.cs",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAAAAsAAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAAABMAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-22T18:59:20.524Z",
-              "IsPinned": true
+              "IsPinned": true,
+              "EditorCaption": ""
             },
             {
               "$type": "Bookmark",
@@ -51,9 +52,9 @@
               "Title": "Eulerian Simulation.cs",
               "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
               "RelativeDocumentMoniker": "Eulerian Simulation.cs",
-              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
-              "RelativeToolTip": "Eulerian Simulation.cs",
-              "ViewState": "AgIAADwBAAAAAAAAAAAIwEcBAAAiAAAAAAAAAA==",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs*",
+              "RelativeToolTip": "Eulerian Simulation.cs*",
+              "ViewState": "AgIAAG4AAAAAAAAAAADwv3oAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-21T19:06:53.537Z",
               "EditorCaption": ""
