@@ -14,57 +14,52 @@ namespace CustomEulerianFluidSimulation
         // Core Constants
         private const int WindowWidth = 1400;
         private const int WindowHeight = 1000;
-        // Usefuls
-        public static readonly Vector2 center = new Vector2(WindowWidth / 2f, WindowHeight / 2f);
         // Simulation Values
-        private readonly float cellSize = 64f;
+        private const int cellSize = 64;
         private readonly EulerianSimulation simulation;
-        private float t = 0f;
+        private readonly Drawer drawer;
+        private float time = 0f;
         private static bool active = false;
 
         public App()
         {
             simulation = new EulerianSimulation(
-                (int)(WindowWidth / cellSize),
-                (int)(WindowHeight / cellSize),
-                cellSize);
+                (WindowWidth / cellSize),
+                (WindowHeight / cellSize) );
+            drawer = new Drawer(cellSize);
         }
 
         public void Draw()
         {
-            simulation.Draw();
+            drawer.DrawSim(simulation.GetCellDrawData(), simulation.GetSimDrawData());
         }
         private void Update()
         {
             float dt = Raylib.GetFrameTime();
-            t += dt;
+            time += dt;
             simulation.Update(dt);
         }
 
         static void Main()
         {
-            Raylib.InitWindow(WindowWidth, WindowHeight, "Eulerian 2D Fluid");
-            Raylib.SetTargetFPS(120);
+            Raylib.InitWindow(WindowWidth, WindowHeight, "Incompressible 2D Eulerian Fluid");
+            Raylib.SetTargetFPS(60);
             App app = new App();
 
             while (!Raylib.WindowShouldClose())
             { 
                 // --- Update ---
                 if (active) app.Update();
-                if (Raylib.IsKeyPressed(KeyboardKey.R))
-                {
+                if (Raylib.IsKeyPressed(KeyboardKey.R)){
                     app.simulation.RandomizeVelocities();
-                }
-                else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
-                {
+                } else if (Raylib.IsKeyPressed(KeyboardKey.Enter)){
                     app.Update();
-                } else if (Raylib.IsKeyPressed(KeyboardKey.Space))
-                {
+                } else if (Raylib.IsKeyPressed(KeyboardKey.Space)){
                     active = !active;
                 }
 
-                    // --- Draw ---
-                    Raylib.BeginDrawing();
+                // --- Draw ---
+                Raylib.BeginDrawing();
                 Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
 
                 app.Draw();

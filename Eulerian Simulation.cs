@@ -2,6 +2,7 @@
 using System.Drawing;
 using System.Numerics;
 using System.Linq;
+using CustomEulerianFluidSimulation;
 
 // World/grid coordinates: the actual coordinates of the simulation, where each cell is 1 unit.
 // This is what we use for all the physics calculations since it makes more sense to have a consistent unit system for that.
@@ -18,11 +19,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 150; // 60 tends to resolve most divergence
-    /// <summary>
-    /// cell size in pixels
-    /// </summary>
-    private readonly float cellSize;
+    private readonly int pressureIters = 150;
     /// <summary>
     /// Staggered grid setup (MAC)
     /// </summary>
@@ -33,6 +30,8 @@ class EulerianSimulation
     /// </summary>
     private float[,] velocityFieldY; // I'll reference this as "V" or "v" since it's the y-velocity, but it's really the velocity on the horizontal faces of the grid cells. Size (W, H+1)
     private float[,] vNew; // for storing results of advection before swapping into velocityFieldY
+
+    private float[,] dyeField; // scalar per cell
     private float[,] divergence; // per cell
     private float[,] pressure; // per cell
     private CellType[,] type; // per cell
@@ -40,7 +39,6 @@ class EulerianSimulation
     // Simulation Constants
     Random random = new Random();
     private readonly Vector2 g = new Vector2(0, 9.81f); // gravity
-    private const float eps = 1e-6f;
 
     // 0: position ; 1,2: velocity (x, y)
     Vector3[,] backtracedDataX;
@@ -48,24 +46,15 @@ class EulerianSimulation
 
     // Statistics | Debug
     public float dt = 0f;
-    public float maxSpeed = 0f;
-    public float minDiv = 0f;
-    public float maxDiv = 0f;
     public float l2DivAfter = 0f;
     public float totalDyeMass = 0f;
 
-    private enum CellType
-    {
-        Solid = 0,
-        Fluid = 1,
-        Air = 2, // for later when we add free surface. For now we just have solid and fluid, and treat the outside as infinite fluid (fix later by generalizing the divergence computation and Poisson solver)
-    }
 
-    public EulerianSimulation(int width, int height, float cellSize)
+
+    public EulerianSimulation(int width, int height)
     {
         this.gridWidth = width;
         this.gridHeight = height;
-        this.cellSize = cellSize;
         // 2D arrays are created column, row since it's an array inside an array.
         velocityFieldX = new float[gridWidth + 1, gridHeight]; // X velocities live on vertical edges, so we need an extra column (i, j+0.5)
         velocityFieldY = new float[gridWidth, gridHeight + 1]; // Y velocities live on horizontal edges, so we need an extra row (i+0.5, j)
@@ -113,23 +102,44 @@ class EulerianSimulation
     }
     public void Update(float deltaTime)
     {
-        //CalculateCFLCondition
+        //dt = deltaTime;
+        dt = CalculateTimeStep();
 
+        ApplyBodyForces(dt);
+        EnforceBoundaries();
+        
+
+        // Does advection need to run on a divergence free field? 
+        ComputeDivergence();
+        ComputePoissonPressure(dt);
+        ProjectPressure(dt);
+        EnforceBoundaries();
+
+        AdvectVelocityRK3(dt);
         EnforceBoundaries();
 
         ComputeDivergence();
-        ComputePoissonPressure(deltaTime);
-        ProjectPressure(deltaTime);
-        EnforceBoundaries();
-
-        AdvectVelocity(deltaTime);
-
-        ComputeDivergence();
-        ComputePoissonPressure(deltaTime);
-        ProjectPressure(deltaTime);
+        ComputePoissonPressure(dt);
+        ProjectPressure(dt);
 
         EnforceBoundaries();
     }
+
+    private float CalculateTimeStep()
+    {
+        float uMax = 0f;
+        for (int i = 0; i < gridWidth + 1; i++)
+            for (int j = 0; j < gridHeight; j++)
+                uMax = Math.Max(uMax, Math.Abs(velocityFieldX[i, j]));
+        float vMax = 0f;
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight + 1; j++)
+                vMax = Math.Max(vMax, Math.Abs(velocityFieldY[i, j]));
+        // Bridson derives 5 * h / maxU, but since our h = 1 in world coordinates, we can just do 5 / maxU.
+        // The 5 is just a safety factor to ensure stability; you can tune it as needed.
+        return 5f / Math.Max(uMax, vMax);
+    }
+
     // Enforce no-penetration: any face adjacent to a solid cell has normal velocity = 0
     // This should work for both border solids and internal obstacles as long as 'type' marks them
     private void EnforceBoundaries()
@@ -149,7 +159,6 @@ class EulerianSimulation
 
         // --- V faces: size (W, H+1), face between cells (i,j-1) and (i,j)
         for (int i = 0; i < gridWidth; i++)
-        {
             for (int j = 1; j < gridHeight; j++)
             {
                 bool isBottomSolid = type[i, j - 1] == CellType.Solid;
@@ -158,7 +167,6 @@ class EulerianSimulation
                 if (isBottomSolid || isTopSolid)
                     velocityFieldY[i, j] = 0f;
             }
-        }
     }
 
     private void ApplyBodyForces(float dt)
@@ -289,8 +297,12 @@ class EulerianSimulation
     /// and sample the velocity field at that point to get the new velocity for that face.
     /// I wrote a ton more in seperate notes on advection, but the gist is that this is basically just "move the velocity field according to its own structure," and it's what creates the swirling, flowing motion of fluids.
     /// Calling it the "convective acceleration" term is accurate.
+    /// 
+    /// RK1: First-order Runge-kutta discretization of the path integral.
+    /// Backtrace once using the velocity at the face to find where the fluid came from, 
+    /// and sample the velocity field at that point to get the new velocity for that face.
     /// </summary>
-    private void AdvectVelocity(float dt)
+    private void AdvectVelocityRK1(float dt)
     {
         // u faces: i = 0..W, j = 0..H-1
         for (int i = 1; i <= gridWidth; i++)
@@ -333,6 +345,87 @@ class EulerianSimulation
             for (int j = 1; j <= gridHeight; j++)
                 velocityFieldY[i, j] = vNew[i, j];
     }
+    /// <summary>
+    /// RK3 is just 3 steps of RK1 with intermediate velocity fields to get better accuracy.
+    /// It's still unconditionally stable like RK1 since it's still semi-Lagrangian, 
+    /// but it reduces numerical dissipation and gives sharper results.
+    /// Think of it like discretizing the path integral with 3 steps instead of one.
+    /// 
+    /// SSPRK3 Coefficients from TVD-RK3 (Shu, Osher, 1988): https://apps.dtic.mil/sti/tr/pdf/ADA314231.pdf
+    /// k0 = u(x)
+    /// k1 = u(x - dt * k0)
+    /// k2 = u(x - dt * (1/4 * k0 + 1/4 * k1)
+    /// Xprev = x - dt * (1/6 * k0 + 1/6 * k1 + 2/3 * k2)
+    /// </summary>
+    /// <param name="dt"></param>
+    private void AdvectVelocityRK3(float dt)
+    {
+        // u faces: i = 0..W, j = 0..H-1
+        for (int i = 1; i <= gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+            {
+                // face world position from grid coordinates
+                float x = i;
+                float y = j + 0.5f;
+
+                // backtrace (backward Euler) to find where the fluid at (x, y) came from
+                Vector2 k0 = SampleMACVelocity(x, y);
+
+                // stage 1
+                float x1 = x - dt * k0.X;
+                float y1 = y - dt * k0.Y;
+                Vector2 k1 = SampleMACVelocity(x1, y1);
+
+                // stage 2
+                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
+                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
+                Vector2 vel2 = SampleMACVelocity(x2, y2);
+
+                // final
+                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * vel2.X);
+                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * vel2.Y);
+
+                // sample OLD u-field at that backtraced position
+                // We avoid in-place updates because the velocity field is used for backtracing, and if we update it in-place,
+                // we would be using some new and some old values during backtracing which would lead to contaminated/incorrect results.
+                // By using a separate array for the new velocities,
+                // we ensure that all backtracing is done using the original velocity field from the start of the time step and then later swapped.
+                uNew[i, j] = SampleU(xPrev, yPrev);
+            }
+
+        // v faces: i = 0..W-1, j = 0..H
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 1; j <= gridHeight; j++)
+            {
+                float x = i + 0.5f;
+                float y = j;
+                Vector2 vel = SampleMACVelocity(x, y);
+                float xPrev = x - dt * vel.X;
+                float yPrev = y - dt * vel.Y;
+                vNew[i, j] = SampleV(xPrev, yPrev);
+            }
+
+        // swap new velocities into the main velocity fields
+        for (int i = 1; i <= gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+                velocityFieldX[i, j] = uNew[i, j];
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 1; j <= gridHeight; j++)
+                velocityFieldY[i, j] = vNew[i, j];
+    }
+
+    private void AdvectScalarField(float[,] field)
+    {
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+            {
+                // center of cell world position from grid coordinates
+                float x = i + 0.5f;
+                float y = j + 0.5f;
+
+                throw new NotImplementedException();
+            }
+    }
 
 
     // Bilinear sampling of velocity fields at an arbitrary x,y position in world coordinates
@@ -348,8 +441,8 @@ class EulerianSimulation
     private float SampleU(float x, float y)
     {
         // clamp position into valid u sampling domain
-        x = Math.Clamp(x, 0.0f, gridWidth - eps);          // so i0 in [0..W-1], i1 = i0+1 in [1..W]
-        y = Math.Clamp(y, 0.5f, gridHeight - 0.5f - eps);  // so yu in [0..H-1-eps]
+        x = Math.Clamp(x, 0.0f, gridWidth - float.Epsilon);          // so i0 in [0..W-1], i1 = i0+1 in [1..W]
+        y = Math.Clamp(y, 0.5f, gridHeight - 0.5f - float.Epsilon);  // so yu in [0..H-1-eps]
 
         // shift into u-grid coordinates: u lives at (i, j+0.5)
         float yu = y - 0.5f;
@@ -396,8 +489,8 @@ class EulerianSimulation
     private float SampleV(float i, float j)
     {
         // clamp position into valid v sampling domain (we do this because backtracing often requires sampling from negative or out-of-bound values)
-        i = Math.Clamp(i, 0.5f, gridWidth - 0.5f - eps); // so xv in [0..W-1-eps]
-        j = Math.Clamp(j, 0.0f, gridHeight - eps);      // so j0 in [0..H-1], j1 in [1..H]
+        i = Math.Clamp(i, 0.5f, gridWidth - 0.5f - float.Epsilon); // so xv in [0..W-1-eps]
+        j = Math.Clamp(j, 0.0f, gridHeight - float.Epsilon);      // so j0 in [0..H-1], j1 in [1..H]
 
         // shift into v-grid coordinates: v lives at (i+0.5, j)
         float xv = i - 0.5f;
@@ -424,11 +517,11 @@ class EulerianSimulation
         float v01 = velocityFieldY[i0, j1];
         float v11 = velocityFieldY[i1, j1];
 
-        // two linear interps: Vf = Vi + t * (dV); left-right first, then top-bottom
+        // two linear interps: Vf = Vi + t * (dV); top and bottom rows of the surrounding grid square
         float vy0 = v00 + sx * (v10 - v00);
         float vy1 = v01 + sx * (v11 - v01);
 
-        // final interp between the two lerps
+        // final vertical lerp between the two horizontal lerps
         return vy0 + sy * (vy1 - vy0);
     }
     private Vector2 ClampPositionToDomain(int x, int y)
@@ -440,99 +533,15 @@ class EulerianSimulation
 
 
     // #######
-    // DRAWING (alot of this is wrong...cause I need to fix world/screen coords)
+    // DRAWING
     // #######
-    public void Draw()
+    public SimDrawData GetSimDrawData()
     {
-        //ComputeAndDrawStatistics();
+        float minSpeed = float.MaxValue;
+        float maxSpeed = float.MinValue;
+        float minDiv = float.MaxValue;
+        float maxDiv = float.MinValue;
 
-        ComputeMinMaxDivergence();
-
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                DrawDivergence(x, y, pos);
-                //DrawSquareCell(x, y, pos);
-                DrawVelocityVectors(x, y, pos);
-            }
-        }
-        for (int x = 0; x < gridWidth; x++)
-        {
-            for (int y = 0; y < gridHeight; y++)
-            {
-                if (type[x, y] == 0) continue;
-                Vector2 pos = new Vector2(x * cellSize, y * cellSize);
-                //DrawAdvectionVectors(x ,y, pos);
-            }
-        }
-    }
-    //private void ComputeAndDrawStatistics()
-    //{
-    //    // Compute
-    //    maxSpeed = velocityFieldX.Max();
-
-    //    // Draw
-    //    int d = 10;
-    //    void Stat(string label, float val)
-    //    {
-    //        Raylib.DrawText($"{label}: {val:E3}", 10, 10, 16, Raylib_cs.Color.White);
-    //        d += 18;
-    //    }
-    //    Stat("dt", dt);
-    //    Stat("max|u|", maxSpeed);
-    //    //Stat("maxDivBefore", maxDivBefore);
-    //    //Stat("maxDivAfter", maxDivAfter);
-    //    //Stat("L2DivAfter", l2DivAfter);
-    //    //Stat("mass", totalDyeMass);
-    //}
-
-    private void DrawAdvectionVectors(int x, int y, Vector2 pos)
-    {
-        float oldPosX = backtracedDataX[x, y].X * cellSize;
-        float oldPosY = backtracedDataY[x, y].X * cellSize;
-
-        float centerX = pos.X + 0.5f * cellSize;
-        float centerY = pos.Y + 0.5f * cellSize;
-
-        // this makes the visualization FALSE. Only use to see direction, not location
-        float scale = 1f;
-
-        oldPosX *= scale;
-        oldPosY *= scale;
-
-        // Mark old & new pos
-        float size = (cellSize) / 32;
-        Raylib.DrawCircle((int)centerX, (int)centerY, size, Raylib_cs.Color.DarkBlue);
-        Raylib.DrawCircle((int)oldPosX, (int)oldPosY, size, Raylib_cs.Color.Red);
-
-        // Draw a line to the backtraced (old) position
-        Raylib.DrawLineEx(
-            new Vector2(oldPosX, oldPosY),
-            new Vector2(centerX, centerY),
-            2f,
-            Raylib_cs.Color.White
-        );
-
-        Raylib.DrawLineEx(
-            new Vector2(oldPosX, oldPosY),
-            new Vector2(backtracedDataX[x, y].Y + oldPosX, backtracedDataX[x, y].Z + oldPosY),
-            2f,
-            Raylib_cs.Color.Violet
-        );
-    }
-    private void DrawVelocityVectors(int x, int y, Vector2 pos)
-    {
-        if (type[x, y] == 0) return;
-        //DrawVelocityVectorX(x, y, pos);
-        //DrawVelocityVectorY(x, y, pos);
-        DrawVelocityVector(x, y, pos);
-    }
-    private void ComputeMinMaxDivergence()
-    {
-        minDiv = float.MaxValue;
-        maxDiv = float.MinValue;
 
         for (int x = 0; x < gridWidth; x++)
             for (int y = 0; y < gridHeight; y++)
@@ -540,59 +549,44 @@ class EulerianSimulation
                 float d = divergence[x, y];
                 if (d < minDiv) minDiv = d;
                 if (d > maxDiv) maxDiv = d;
+
+                Vector2 vel = SampleMACVelocity(x + 0.5f, y + 0.5f);
+                float u = Math.Abs(vel.X);
+                float v = Math.Abs(vel.Y);
+                if (u < minSpeed) minSpeed = u;
+                if (v < minSpeed) minSpeed = v;
+                if (u > maxSpeed) maxSpeed = u;
+                if (v > maxSpeed) maxSpeed = v;
             }
-    }
-    private void DrawDivergence(int x, int y, Vector2 pos)
-    {
-        float div = divergence[x, y];
 
-        // Normalize divergence to 0–1 range
-        float normalized = (div - minDiv) / (maxDiv - minDiv + 1e-6f); // the addition is epsilon
 
-        // Convert to color: blue = negative, red = positive, gray = near zero
-        // Hue 0° = red, 240° = blue
-        float hue = 240f * (1f - normalized);
-        Raylib_cs.Color color = type[x, y] == CellType.Fluid ? Raylib.ColorFromHSV(hue, 1f, 0.3f) : Raylib_cs.Color.Black;
+        return new SimDrawData
+        {
+            MinDivergence = minDiv,
+            MaxDivergence = maxDiv,
+            MaxSpeed = maxSpeed,
+            MinSpeed = minSpeed,
+            dt = dt,
+        };
+    }
+    public CellDrawData[,] GetCellDrawData()
+    {
+        CellDrawData[,] drawData = new CellDrawData[gridWidth, gridHeight];
+        for (int x = 0; x < gridWidth; x++)
+        {
+            for (int y = 0; y < gridHeight; y++)
+            {
+                drawData[x, y] = new CellDrawData
+                {
+                    Divergence = divergence[x, y],
+                    Type = type[x, y],
+                    Velocity = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]),
+                    Position = new Vector2(x, y),
+                };
+            }
+        }
+        return drawData;
+    }
 
-        Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
-    }
-    private void DrawSquareCell(int x, int y, Vector2 pos)
-    {
-        Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.Black);
-    }
-    private void DrawVelocityVectorX(int x, int y, Vector2 pos)
-    {
-        int scale = 10;
-        int yOffset = (int)(cellSize / 2);
-        pos.Y += yOffset;
-        Raylib.DrawLine((int)pos.X, (int)pos.Y,
-                        (int)(pos.X + velocityFieldX[x, y] * scale),
-                        (int)(pos.Y),
-                        velocityFieldX[x, y] > 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
-    }
-    private void DrawVelocityVectorY(int x, int y, Vector2 pos)
-    {
-        int scale = 10;
-        int xOffset = (int)(cellSize / 2);
-        pos.X -= xOffset;
-        Raylib.DrawLine((int)pos.X, (int)pos.Y,
-                        (int)(pos.X),
-                        (int)(pos.Y + velocityFieldY[x, y] * scale),
-                        velocityFieldY[x, y] < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
-    }
-    private void DrawVelocityVector(int x, int y, Vector2 pos)
-    {
-        int scale = 1;
-        int offset = (int)(cellSize / 2);
-        pos.X += offset;
-        pos.Y += offset;
-        Vector2 endPos = new Vector2(
-            (pos.X + velocityFieldX[x, y] * scale),
-            (pos.Y + velocityFieldY[x, y] * scale));
-
-        Raylib.DrawLineEx(pos,
-                        endPos,
-                        1f,
-                        Raylib_cs.Color.SkyBlue);
-    }
+    
 }
