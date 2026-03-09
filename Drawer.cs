@@ -13,6 +13,7 @@ namespace CustomEulerianFluidSimulation
     class Drawer
     {
         private float cellSize;
+        private Vector2 _offSet = new Vector2(1, 1);
         private const float eps = 1e-5f;
         public Drawer(int cellSize) 
         {
@@ -23,9 +24,10 @@ namespace CustomEulerianFluidSimulation
         {            
             foreach (CellDrawData cellData in cellDrawDatas)
             {
-                Vector2 pos = cellData.Position * cellSize;
+                Vector2 pos = (cellData.Position + _offSet) * cellSize;
                 DrawDivergence(pos, cellData.Divergence);
-                DrawVelocityVectors(pos, cellData.Velocity);
+                DrawVelocityVectors(pos, cellData.UVVelocity, cellData.CellVelocity);
+                DrawIndex(pos);
                 if (cellData.Type == CellType.Solid)
                 {
                     DrawSquareCell(pos);
@@ -33,6 +35,14 @@ namespace CustomEulerianFluidSimulation
             }
             DrawStatistics(simDrawData);
         }
+
+        private void DrawIndex(Vector2 pos)
+        {
+            int x = (int)(pos.X / cellSize);
+            int y = (int)(pos.Y / cellSize);
+            Raylib.DrawText($"{x},{y}", (int)pos.X + 5, (int)pos.Y + 5, 10, Raylib_cs.Color.White);
+        }
+
         private void DrawStatistics(SimDrawData data)
         {
             int d = 40;
@@ -41,12 +51,11 @@ namespace CustomEulerianFluidSimulation
                 Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.White);
                 d += 40;
             }
-            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 4, Raylib_cs.Color.Black);
+            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 4, new Raylib_cs.Color(0, 0, 0, 0.75f));
             Stat("dt", data.dt);
             Stat("Max|u|", data.MaxSpeed);
             Stat("MinDiv", data.MinDivergence);
             Stat("MaxDiv", data.MaxDivergence);
-            // draw a dark box behind the text for better visibility
         }
         //private void DrawAdvectionVectors(int x, int y, Vector2 pos)
         //{
@@ -82,11 +91,11 @@ namespace CustomEulerianFluidSimulation
         //        Raylib_cs.Color.Violet
         //    );
         //}
-        private void DrawVelocityVectors(Vector2 pos, Vector2 velocity)
+        private void DrawVelocityVectors(Vector2 pos, Vector2 faceVelocities, Vector2 cellVelocity)
         {
-            DrawVelocityVectorX(pos, velocity); 
-            DrawVelocityVectorY(pos, velocity);
-            DrawVelocityVector(pos, velocity);
+            DrawVelocityVectorX(pos, faceVelocities.X); 
+            DrawVelocityVectorY(pos, faceVelocities.Y);
+            DrawVelocityVector(pos, cellVelocity);
         }
 
         // ChatGPT helped me write this function to visualize the divergence field with a nice color mapping.
@@ -136,25 +145,25 @@ namespace CustomEulerianFluidSimulation
         {
             Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.White);
         }
-        private void DrawVelocityVectorX(Vector2 pos, Vector2 velocity)
+        private void DrawVelocityVectorX(Vector2 pos, float velocity)
         {
             int scale = 10;
             int yOffset = (int)(cellSize / 2);
             pos.Y += yOffset;
             Raylib.DrawLine((int)pos.X, (int)pos.Y,
-                            (int)(pos.X + velocity.X * scale),
+                            (int)(pos.X + velocity * scale),
                             (int)(pos.Y),
-                            velocity.X > 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
+                            velocity > 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
         }
-        private void DrawVelocityVectorY(Vector2 pos, Vector2 velocity)
+        private void DrawVelocityVectorY(Vector2 pos, float velocity)
         {
             int scale = 10;
             int xOffset = (int)(cellSize / 2);
             pos.X -= xOffset;
             Raylib.DrawLine((int)pos.X, (int)pos.Y,
                             (int)(pos.X),
-                            (int)(pos.Y + velocity.Y * scale),
-                            velocity.Y < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
+                            (int)(pos.Y + velocity * scale),
+                            velocity < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
         }
         private void DrawVelocityVector(Vector2 pos, Vector2 velocity)
         {

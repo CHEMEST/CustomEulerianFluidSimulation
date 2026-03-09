@@ -24,8 +24,8 @@ namespace CustomEulerianFluidSimulation
         public App()
         {
             simulation = new EulerianSimulation(
-                (WindowWidth / cellSize),
-                (WindowHeight / cellSize) );
+                (WindowWidth / cellSize) - 1,
+                (WindowHeight / cellSize) - 1);
             drawer = new Drawer(cellSize);
         }
 

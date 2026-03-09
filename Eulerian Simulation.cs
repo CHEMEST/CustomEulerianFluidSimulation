@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Numerics;
 using System.Linq;
 using CustomEulerianFluidSimulation;
+using System.Diagnostics;
 
 // World/grid coordinates: the actual coordinates of the simulation, where each cell is 1 unit.
 // This is what we use for all the physics calculations since it makes more sense to have a consistent unit system for that.
@@ -81,7 +82,7 @@ class EulerianSimulation
                 backtracedDataY[i, j] = Vector3.Zero;
 
                 type[i, j] = (i == 0 || i == gridWidth - 1 || j == 0 || j == gridHeight - 1) ? CellType.Solid : CellType.Fluid; // u(0, j), v(i, 0), u(gridWidth, j), v(i, gridHeight) are all solid boundaries.
-
+                Console.Write(type[i , j] == 0 ? "SOLID | " : "");
             }
         }
         RandomizeVelocities();
@@ -90,15 +91,13 @@ class EulerianSimulation
     public void RandomizeVelocities()
     {
         float scale = 10f;
-        for (int i = 0; i < gridWidth; i++)
-        {
+        for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-            {
                 velocityFieldX[i, j] = ((float)random.NextDouble()*2 - 1) * scale;
-                velocityFieldY[i, j] = ((float)random.NextDouble()*2 - 1) * scale;
-            }
-        }
-        ComputeDivergence(); // for first-frame visualization
+
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j <= gridHeight; j++)
+                velocityFieldY[i, j] = ((float)random.NextDouble() * 2 - 1) * scale;
     }
     public void Update(float deltaTime)
     {
@@ -106,10 +105,10 @@ class EulerianSimulation
         dt = CalculateTimeStep();
 
         //ApplyBodyForces(dt);
-        //EnforceBoundaries();
-        
+        EnforceBoundaries();
 
-        //// Does advection need to run on a divergence free field? 
+
+        //// Does advection need to run on a divergence free field?
         ComputeDivergence();
         //ComputePoissonPressure(dt);
         //ProjectPressure(dt);
@@ -122,7 +121,7 @@ class EulerianSimulation
         //ComputePoissonPressure(dt);
         //ProjectPressure(dt);
 
-        EnforceBoundaries();
+        //EnforceBoundaries();
     }
 
     private float CalculateTimeStep()
@@ -136,7 +135,7 @@ class EulerianSimulation
             for (int j = 0; j < gridHeight + 1; j++)
                 vMax = Math.Max(vMax, Math.Abs(velocityFieldY[i, j]));
         // Bridson derives 5 * h / maxU, but since our h = 1 in world coordinates, we can just do 5 / maxU.
-        // The 5 is just a safety factor to ensure stability; you can tune it as needed.
+        // The 5 is just a safety factor to ensure stability; tune it as needed.
         return 5f / Math.Max(uMax, vMax);
     }
     private bool IsSolidCell(int i, int j)
@@ -173,45 +172,45 @@ class EulerianSimulation
     {
         // --- U faces: size (W+1, H), u[i,j] is face between cell (i-1,j) and (i,j)
         // 1) Hard domain boundaries: left wall u[0,*] and right wall u[W,*]
-        for (int i = 0; i <= gridWidth; i++)
+        for (int i = 0; i < gridHeight; i++)
         {
-            velocityFieldX[i, 0] = 0f;
-            velocityFieldX[i, gridHeight - 1] = 0f;
+            velocityFieldX[0, i] = 0f;
+            velocityFieldX[gridWidth, i] = 0f;
         }
 
-        // 2) Interior faces: if either adjacent cell is solid, zero it
-        for (int i = 1; i < gridWidth; i++)
-        {
-            for (int j = 0; j < gridHeight; j++)
-            {
-                bool leftSolid = (type[i - 1, j] == CellType.Solid);
-                bool rightSolid = (type[i, j] == CellType.Solid);
+        //// 2) Interior faces: if either adjacent cell is solid, zero it
+        //for (int i = 1; i < gridWidth; i++)
+        //{
+        //    for (int j = 0; j < gridHeight; j++)
+        //    {
+        //        bool leftSolid = (type[i - 1, j] == CellType.Solid);
+        //        bool rightSolid = (type[i, j] == CellType.Solid);
 
-                if (leftSolid || rightSolid)
-                    velocityFieldX[i, j] = 0f;
-            }
-        }
+        //        if (leftSolid || rightSolid)
+        //            velocityFieldX[i, j] = 0f;
+        //    }
+        //}
 
         // --- V faces: size (W, H+1), v[i,j] is face between cell (i,j-1) and (i,j)
         // 1) Hard domain boundaries: bottom wall v[* ,0] and top wall v[* ,H]
-        for (int j = 0; j <= gridHeight; j++)
-        {
-            velocityFieldY[0, j] = 0f;
-            velocityFieldY[gridWidth - 1, j] = 0f;
-        }
+        //for (int j = 0; j <= gridHeight; j++)
+        //{
+        //    velocityFieldY[0, j] = 0f;
+        //    velocityFieldY[gridWidth - 1, j] = 0f;
+        //}
 
-        // 2) Interior faces: if either adjacent cell is solid, zero it
-        for (int i = 0; i < gridWidth; i++)
-        {
-            for (int j = 1; j < gridHeight; j++)
-            {
-                bool bottomSolid = (type[i, j - 1] == CellType.Solid);
-                bool topSolid = (type[i, j] == CellType.Solid);
+        //// 2) Interior faces: if either adjacent cell is solid, zero it
+        //for (int i = 0; i < gridWidth; i++)
+        //{
+        //    for (int j = 1; j < gridHeight; j++)
+        //    {
+        //        bool bottomSolid = (type[i, j - 1] == CellType.Solid);
+        //        bool topSolid = (type[i, j] == CellType.Solid);
 
-                if (bottomSolid || topSolid)
-                    velocityFieldY[i, j] = 0f;
-            }
-        }
+        //        if (bottomSolid || topSolid)
+        //            velocityFieldY[i, j] = 0f;
+        //    }
+        //}
     }
 
     private void ApplyBodyForces(float dt)
@@ -625,8 +624,8 @@ class EulerianSimulation
                 {
                     Divergence = divergence[x, y],
                     Type = type[x, y],
-                    Velocity = SampleMACVelocity(x + 0.5f, y + 0.5f),
-                    //Velocity = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]),
+                    CellVelocity = SampleMACVelocity(x + 0.5f, y + 0.5f),
+                    UVVelocity = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]),
                     Position = new Vector2(x, y),
                 };
             }
