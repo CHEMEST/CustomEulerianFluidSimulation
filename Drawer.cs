@@ -38,13 +38,15 @@ namespace CustomEulerianFluidSimulation
             int d = 40;
             void Stat(string label, float val)
             {
-                Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.Violet);
+                Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.White);
                 d += 40;
             }
+            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 4, Raylib_cs.Color.Black);
             Stat("dt", data.dt);
             Stat("Max|u|", data.MaxSpeed);
             Stat("MinDiv", data.MinDivergence);
             Stat("MaxDiv", data.MaxDivergence);
+            // draw a dark box behind the text for better visibility
         }
         //private void DrawAdvectionVectors(int x, int y, Vector2 pos)
         //{
@@ -82,8 +84,8 @@ namespace CustomEulerianFluidSimulation
         //}
         private void DrawVelocityVectors(Vector2 pos, Vector2 velocity)
         {
-            //DrawVelocityVectorX(x, y, pos);
-            //DrawVelocityVectorY(x, y, pos);
+            DrawVelocityVectorX(pos, velocity); 
+            DrawVelocityVectorY(pos, velocity);
             DrawVelocityVector(pos, velocity);
         }
 
@@ -132,7 +134,7 @@ namespace CustomEulerianFluidSimulation
         }
         private void DrawSquareCell(Vector2 pos)
         {
-            Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.Black);
+            Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.White);
         }
         private void DrawVelocityVectorX(Vector2 pos, Vector2 velocity)
         {

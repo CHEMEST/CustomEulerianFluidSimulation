@@ -105,22 +105,22 @@ class EulerianSimulation
         //dt = deltaTime;
         dt = CalculateTimeStep();
 
-        ApplyBodyForces(dt);
-        EnforceBoundaries();
+        //ApplyBodyForces(dt);
+        //EnforceBoundaries();
         
 
-        // Does advection need to run on a divergence free field? 
+        //// Does advection need to run on a divergence free field? 
         ComputeDivergence();
-        ComputePoissonPressure(dt);
-        ProjectPressure(dt);
-        EnforceBoundaries();
+        //ComputePoissonPressure(dt);
+        //ProjectPressure(dt);
+        //EnforceBoundaries();
 
-        AdvectVelocityRK3(dt);
-        EnforceBoundaries();
+        //AdvectVelocityRK3(dt);
+        //EnforceBoundaries();
 
-        ComputeDivergence();
-        ComputePoissonPressure(dt);
-        ProjectPressure(dt);
+        //ComputeDivergence();
+        //ComputePoissonPressure(dt);
+        //ProjectPressure(dt);
 
         EnforceBoundaries();
     }
@@ -139,34 +139,79 @@ class EulerianSimulation
         // The 5 is just a safety factor to ensure stability; you can tune it as needed.
         return 5f / Math.Max(uMax, vMax);
     }
+    private bool IsSolidCell(int i, int j)
+    {
+        // Treat outside-the-grid as solid boundary
+        if (i <= 0 || i > gridWidth || j <= 0 || j > gridHeight)
+            return true;
 
+        return type[i, j] == CellType.Solid;
+    }
     // Enforce no-penetration: any face adjacent to a solid cell has normal velocity = 0
     // This should work for both border solids and internal obstacles as long as 'type' marks them
-    private void EnforceBoundaries()
+    private void EnforceBoundariesOld()
     {
         // --- U faces: size (W+1, H), face between cells (i-1,j) and (i,j)
-        for (int i = 1; i < gridWidth; i++)
+        for (int i = 0; i <= gridWidth; i++)
         {
             for (int j = 0; j < gridHeight; j++)
             {
-                bool isLeftSolid = type[i - 1, j] == CellType.Solid;
-                bool isRightSolid = type[i, j] == CellType.Solid;
-
-                if (isLeftSolid || isRightSolid)
+                if (IsSolidCell(i - 1, j) || IsSolidCell(i, j))
                     velocityFieldX[i, j] = 0f;
             }
         }
 
         // --- V faces: size (W, H+1), face between cells (i,j-1) and (i,j)
         for (int i = 0; i < gridWidth; i++)
-            for (int j = 1; j < gridHeight; j++)
+            for (int j = 0; j <= gridHeight; j++)
             {
-                bool isBottomSolid = type[i, j - 1] == CellType.Solid;
-                bool isTopSolid = type[i, j] == CellType.Solid;
-
-                if (isBottomSolid || isTopSolid)
+                if (IsSolidCell(i, j - 1) || IsSolidCell(i, j))
                     velocityFieldY[i, j] = 0f;
             }
+    }
+    private void EnforceBoundaries()
+    {
+        // --- U faces: size (W+1, H), u[i,j] is face between cell (i-1,j) and (i,j)
+        // 1) Hard domain boundaries: left wall u[0,*] and right wall u[W,*]
+        for (int i = 0; i <= gridWidth; i++)
+        {
+            velocityFieldX[i, 0] = 0f;
+            velocityFieldX[i, gridHeight - 1] = 0f;
+        }
+
+        // 2) Interior faces: if either adjacent cell is solid, zero it
+        for (int i = 1; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                bool leftSolid = (type[i - 1, j] == CellType.Solid);
+                bool rightSolid = (type[i, j] == CellType.Solid);
+
+                if (leftSolid || rightSolid)
+                    velocityFieldX[i, j] = 0f;
+            }
+        }
+
+        // --- V faces: size (W, H+1), v[i,j] is face between cell (i,j-1) and (i,j)
+        // 1) Hard domain boundaries: bottom wall v[* ,0] and top wall v[* ,H]
+        for (int j = 0; j <= gridHeight; j++)
+        {
+            velocityFieldY[0, j] = 0f;
+            velocityFieldY[gridWidth - 1, j] = 0f;
+        }
+
+        // 2) Interior faces: if either adjacent cell is solid, zero it
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 1; j < gridHeight; j++)
+            {
+                bool bottomSolid = (type[i, j - 1] == CellType.Solid);
+                bool topSolid = (type[i, j] == CellType.Solid);
+
+                if (bottomSolid || topSolid)
+                    velocityFieldY[i, j] = 0f;
+            }
+        }
     }
 
     private void ApplyBodyForces(float dt)
@@ -550,7 +595,7 @@ class EulerianSimulation
                 if (d < minDiv) minDiv = d;
                 if (d > maxDiv) maxDiv = d;
 
-                Vector2 vel = SampleMACVelocity(x + 0.5f, y + 0.5f);
+                Vector2 vel = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]);
                 float u = Math.Abs(vel.X);
                 float v = Math.Abs(vel.Y);
                 if (u < minSpeed) minSpeed = u;
@@ -580,7 +625,8 @@ class EulerianSimulation
                 {
                     Divergence = divergence[x, y],
                     Type = type[x, y],
-                    Velocity = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]),
+                    Velocity = SampleMACVelocity(x + 0.5f, y + 0.5f),
+                    //Velocity = new Vector2(velocityFieldX[x, y], velocityFieldY[x, y]),
                     Position = new Vector2(x, y),
                 };
             }

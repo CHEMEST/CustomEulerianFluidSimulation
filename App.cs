@@ -60,7 +60,7 @@ namespace CustomEulerianFluidSimulation
 
                 // --- Draw ---
                 Raylib.BeginDrawing();
-                Raylib.ClearBackground(Raylib_cs.Color.DarkGreen);
+                Raylib.ClearBackground(Raylib_cs.Color.DarkGray);
 
                 app.Draw();
 
