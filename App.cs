@@ -20,18 +20,19 @@ namespace CustomEulerianFluidSimulation
         private readonly Drawer drawer;
         private float time = 0f;
         private static bool active = false;
+        private bool slowDown = false;
 
         public App()
         {
-            simulation = new EulerianSimulation(
-                (WindowWidth / cellSize) - 1,
-                (WindowHeight / cellSize) - 1);
-            drawer = new Drawer(cellSize);
+            int gridWidth = (WindowWidth / cellSize) - 1;
+            int gridHeight = (WindowHeight / cellSize) - 1;
+            simulation = new EulerianSimulation( gridWidth, gridHeight);
+            drawer = new Drawer(cellSize, gridWidth, gridHeight);
         }
 
         public void Draw()
         {
-            drawer.DrawSim(simulation.GetCellDrawData(), simulation.GetSimDrawData());
+            drawer.DrawSim(simulation.GetSimDrawData(), simulation.GetCellDrawData(), simulation.VelocityFieldX, simulation.VelocityFieldY);
         }
         private void Update()
         {
@@ -56,6 +57,11 @@ namespace CustomEulerianFluidSimulation
                     app.Update();
                 } else if (Raylib.IsKeyPressed(KeyboardKey.Space)){
                     active = !active;
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.LeftShift))
+                {
+                    app.slowDown = !app.slowDown;
+                    Raylib.SetTargetFPS(app.slowDown ? 10 : 60);
                 }
 
                 // --- Draw ---
