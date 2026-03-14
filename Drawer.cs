@@ -24,37 +24,37 @@ namespace CustomEulerianFluidSimulation
             this.gridHeight = gridHeight;
         }
 
-        public void DrawSim(SimDrawData simDrawData, CellDrawData[,] cellDrawDatas, float[,] u, float[,] v)
+        public void DrawSim(SimDrawData simDrawData, CellDrawData[,] cellDrawDatas, float[,] u, float[,] v, int steps)
         {            
             foreach (CellDrawData cellData in cellDrawDatas)
             {
                 Vector2 pos = (cellData.Position + _offSet) * cellSize;
                 //DrawDivergence(pos, cellData.Divergence);
                 DrawDye(pos, cellData.Dye);
-                DrawCellVelocity(pos, cellData.CellVelocity);
-                DrawIndex(pos, cellData.Position);
-                if (cellData.Type == CellType.Solid)
-                {
-                    DrawSquareCell(pos);
-                }
+                //DrawCellVelocity(pos, cellData.CellVelocity);
+                //DrawIndex(pos, cellData.Position);
+                //if (cellData.Type == CellType.Solid)
+                //{
+                //    DrawSquareCell(pos);
+                //}
             }
-            for (int i = 0; i <= gridWidth; i++)
-            {
-                for (int j = 0; j < gridHeight; j++)
-                {
-                    Vector2 pos = new Vector2((i + _offSet.X) * cellSize, (j + 0.5f + _offSet.Y) * cellSize);
-                    DrawVelocityU(pos, u[i, j]);
-                }
-            }
-            for (int i = 0; i < gridWidth; i++)
-            {
-                for (int j = 0; j <= gridHeight; j++)
-                {
-                    Vector2 pos = new Vector2((i + 0.5f + _offSet.X) * cellSize, (j + _offSet.Y) * cellSize);
-                    DrawVelocityV(pos, v[i, j]);
-                }
-            }
-            DrawStatistics(simDrawData);
+            //for (int i = 0; i <= gridWidth; i++)
+            //{
+            //    for (int j = 0; j < gridHeight; j++)
+            //    {
+            //        Vector2 pos = new Vector2((i + _offSet.X) * cellSize, (j + 0.5f + _offSet.Y) * cellSize);
+            //        DrawVelocityU(pos, u[i, j]);
+            //    }
+            //}
+            //for (int i = 0; i < gridWidth; i++)
+            //{
+            //    for (int j = 0; j <= gridHeight; j++)
+            //    {
+            //        Vector2 pos = new Vector2((i + 0.5f + _offSet.X) * cellSize, (j + _offSet.Y) * cellSize);
+            //        DrawVelocityV(pos, v[i, j]);
+            //    }
+            //}
+            DrawStatistics(simDrawData, steps);
         }
 
         private void DrawDye(Vector2 pos, float dye)
@@ -68,7 +68,7 @@ namespace CustomEulerianFluidSimulation
             Raylib.DrawText($"{index.X},{index.Y}", (int)pos.X + 5, (int)pos.Y + 5, 10, Raylib_cs.Color.White);
         }
 
-        private void DrawStatistics(SimDrawData data)
+        private void DrawStatistics(SimDrawData data, int steps)
         {
             int d = 40;
             void Stat(string label, float val)
@@ -76,11 +76,13 @@ namespace CustomEulerianFluidSimulation
                 Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.White);
                 d += 40;
             }
-            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 4, new Raylib_cs.Color(0, 0, 0, 0.75f));
+            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 6, new Raylib_cs.Color(0, 0, 0, 0.75f));
+            Stat("steps", steps);
             Stat("dt", data.dt);
             Stat("Max|u|", data.MaxSpeed);
             Stat("MinDiv", data.MinDivergence);
             Stat("MaxDiv", data.MaxDivergence);
+            Stat("Dye", data.TotalDye);
         }
         //private void DrawAdvectionVectors(int x, int y, Vector2 pos)
         //{
@@ -170,7 +172,7 @@ namespace CustomEulerianFluidSimulation
             Raylib.DrawLine((int)pos.X, (int)pos.Y,
                             (int)(pos.X + velocity * scale),
                             (int)(pos.Y),
-                            velocity > 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
+                            velocity > 0 ? new Raylib_cs.Color(0, 1, 0, 0.5f) : new Raylib_cs.Color(1, 0, 0, 0.5f));
         }
         private void DrawVelocityV(Vector2 pos, float velocity)
         {
@@ -184,11 +186,10 @@ namespace CustomEulerianFluidSimulation
         {
             int scale = 1;
             int offset = (int)(cellSize / 2);
-            pos.X += offset;
-            pos.Y += offset;
+            pos += new Vector2(offset, offset);
             Vector2 endPos = new Vector2(
-                (pos.X + velocity.X * scale),
-                (pos.Y + velocity.Y * scale));
+                (pos.X + velocity.X),
+                (pos.Y + velocity.Y)) * scale;
 
             Raylib.DrawLineEx(pos,
                             endPos,

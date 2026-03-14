@@ -15,10 +15,10 @@ namespace CustomEulerianFluidSimulation
         private const int WindowWidth = 1400;
         private const int WindowHeight = 1000;
         // Simulation Values
-        private const int cellSize = 64;
+        private const int cellSize = 20;
         private readonly EulerianSimulation simulation;
         private readonly Drawer drawer;
-        private float time = 0f;
+        private static int steps = 0;
         private static bool active = false;
         private bool slowDown = false;
 
@@ -32,12 +32,13 @@ namespace CustomEulerianFluidSimulation
 
         public void Draw()
         {
-            drawer.DrawSim(simulation.GetSimDrawData(), simulation.GetCellDrawData(), simulation.VelocityFieldX, simulation.VelocityFieldY);
+            drawer.DrawSim(simulation.GetSimDrawData(), simulation.GetCellDrawData(), simulation.VelocityFieldX, simulation.VelocityFieldY,
+                steps);
         }
         private void Update()
         {
             float dt = Raylib.GetFrameTime();
-            time += dt;
+            steps += 1;
             simulation.Update(dt);
         }
 
@@ -52,7 +53,8 @@ namespace CustomEulerianFluidSimulation
                 // --- Update ---
                 if (active) app.Update();
                 if (Raylib.IsKeyPressed(KeyboardKey.R)){
-                    app.simulation.RandomizeVelocities();
+                    app.simulation.ResetSim();
+                    steps = 0;
                 } else if (Raylib.IsKeyPressed(KeyboardKey.Enter)){
                     app.Update();
                 } else if (Raylib.IsKeyPressed(KeyboardKey.Space)){

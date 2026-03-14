@@ -20,7 +20,7 @@ class EulerianSimulation
     // Parameters
     private readonly int gridWidth;
     private readonly int gridHeight;
-    private readonly int pressureIters = 45; // 45-50 seems to be just barely enough
+    private readonly int pressureIters = 75;
     /// <summary>
     /// Staggered grid setup (MAC)
     /// </summary>
@@ -49,7 +49,6 @@ class EulerianSimulation
     // Statistics | Debug
     public float dt = 0f;
     public float l2DivAfter = 0f;
-    public float totalDyeMass = 0f;
 
 
 
@@ -83,18 +82,17 @@ class EulerianSimulation
                 divergence[i, j] = 0f;
                 backtracedDataX[i, j] = Vector3.Zero;
                 backtracedDataY[i, j] = Vector3.Zero;
-                dye[i, j] = (i > 2 && i < 5 && j > 2 && j < 6) ? 1f : 0f;
 
                 type[i, j] = CellType.Fluid; // u(0, j), v(i, 0), u(gridWidth, j), v(i, gridHeight) are all solid boundaries.
                 //Console.Write(type[i , j] == 0 ? "SOLID | " : "");
             }
         }
-        RandomizeVelocities();
+        ResetSim();
 
     }
-    public void RandomizeVelocities()
+    public void ResetSim()
     {
-        float scale = 10f;
+        float scale = 35f;
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
                 VelocityFieldX[i, j] = ((float)random.NextDouble()*2 - 1) * scale;
@@ -102,13 +100,17 @@ class EulerianSimulation
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
                 VelocityFieldY[i, j] = ((float)random.NextDouble() * 2 - 1) * scale;
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+                dye[i, j] = i > 12 && i < 40 && j > 12 && j < 56 ? (Math.Clamp( (float)random.NextDouble(), 0, 1)) : 0f;
+
 
         ComputeDivergence();
     }
     public void Update(float deltaTime)
     {
-        dt = 0.01f;
-        //dt = CalculateTimeStep();
+        //dt = 0.01f;
+        dt = CalculateTimeStep();
 
         //ApplyBodyForces(dt);
         EnforceBoundaries();
@@ -120,7 +122,7 @@ class EulerianSimulation
         ProjectPressure(dt);
         EnforceBoundaries();
 
-        //AdvectVelocityRK3(dt); //huge dissipation for some reason, maybe a bug in the backtracing or sampling?
+        AdvectVelocityRK3(dt);
         EnforceBoundaries();
 
         ComputeDivergence();
@@ -145,7 +147,7 @@ class EulerianSimulation
                 vMax = Math.Max(vMax, Math.Abs(VelocityFieldY[i, j]));
         // Bridson derives CFL * h / maxU, but since our h = 1 in world coordinates, we can just do k / maxU.
         // The 1 is just a safety factor to ensure stability; tune it as needed.
-        return 1f / Math.Max(uMax, vMax);
+        return 0.4f / Math.Max(uMax, vMax);
     }
     private bool IsSolidCell(int i, int j)
     {
@@ -212,9 +214,10 @@ class EulerianSimulation
         }
     }
     /// <summary>
-    /// Laplacian of pressure = the sum of the pressures in the S neighboring cells - S * pressure in the current cell.
+    /// Laplacian of pressure = the sum of the pressures in the S neighboring faces - S * pressure in the current cell.
     /// Where S is the number of non-solid neighbors.
     /// This is the discrete version of the continuous Laplacian operator.
+    /// 
     /// </summary>
     /// <param name="dt"></param>
     private void ComputePoissonPressure(float dt)
@@ -222,10 +225,10 @@ class EulerianSimulation
         for (int n = 0; n < pressureIters; n++)
         {
             //Console.WriteLine($"Poisson iteration {n + 1}/{pressureIters}");
-            for (int i = 1; i < gridWidth-1; i++)
+            for (int i = 0; i < gridWidth; i++)
             {
                 //Console.WriteLine($"  Row {i}/{gridWidth - 1}");
-                for (int j = 1; j < gridHeight-1; j++)
+                for (int j = 0; j < gridHeight; j++)
                 {
                     //Console.WriteLine($"    Cell ({i}, {j})");
                     if (type[i, j] == CellType.Solid) { pressure[i, j] = 0; continue; } // no pressure in solids since they don't move.
@@ -233,10 +236,16 @@ class EulerianSimulation
                     float sum = 0;
                     int count = 0;
                     // Check 4 neighbors
-                    if (type[i - 1, j] != CellType.Solid) { sum += pressure[i - 1, j]; count++; }
-                    if (type[i + 1, j] != CellType.Solid) { sum += pressure[i + 1, j]; count++; }
-                    if (type[i, j - 1] != CellType.Solid) { sum += pressure[i, j - 1]; count++; }
-                    if (type[i, j + 1] != CellType.Solid) { sum += pressure[i, j + 1]; count++; }
+
+                    // Left neighbor
+                    if (i > 0 && type[i - 1, j] != CellType.Solid) { sum += pressure[i - 1, j]; count++; }
+                    // Right neighbor
+                    if (i < gridWidth - 1 && type[i + 1, j] != CellType.Solid) { sum += pressure[i + 1, j]; count++; }
+                    // Bottom neighbor
+                    if (j > 0 && type[i, j - 1] != CellType.Solid) { sum += pressure[i, j - 1]; count++; }
+                    // Top neighbor
+                    if (j < gridHeight - 1 && type[i, j + 1] != CellType.Solid) { sum += pressure[i, j + 1]; count++; }
+
                     if (count == 0) { pressure[i, j] = 0; continue; } // if a fluid cell is completely surrounded by solid cells for whatever reason, it shouldn't build up infinite pressure since it can't move anyway, so we can just set its pressure to 0 and move on.
 
                     // the "source" term for the Poisson equation is the divergence of the velocity field.
@@ -403,21 +412,21 @@ class EulerianSimulation
                 float y = j + 0.5f;
 
                 // backtrace (backward Euler) to find where the fluid at (x, y) came from
-                Vector2 k0 = SampleMACVelocity(x, y);
+                float k0 = SampleU(x, y);
 
                 // stage 1
-                float x1 = x - dt * k0.X;
-                float y1 = y - dt * k0.Y;
-                Vector2 k1 = SampleMACVelocity(x1, y1);
+                float x1 = x - dt * k0;
+                float y1 = y - dt * k0;
+                float k1 = SampleU(x1, y1);
 
                 // stage 2
-                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
-                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
-                Vector2 vel2 = SampleMACVelocity(x2, y2);
+                float x2 = x - dt * (0.25f * k0 + 0.25f * k1);
+                float y2 = y - dt * (0.25f * k0 + 0.25f * k1);
+                float vel2 = SampleU(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * vel2.X);
-                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * vel2.Y);
+                float xPrev = x - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
+                float yPrev = y - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
 
                 // sample OLD u-field at that backtraced position
                 // We avoid in-place updates because the velocity field is used for backtracing, and if we update it in-place,
@@ -436,21 +445,21 @@ class EulerianSimulation
                 float y = j;
 
                 // backtrace (backward Euler) to find where the fluid at (x, y) came from
-                Vector2 k0 = SampleMACVelocity(x, y);
+                float k0 = SampleV(x, y);
 
                 // stage 1
-                float x1 = x - dt * k0.X;
-                float y1 = y - dt * k0.Y;
-                Vector2 k1 = SampleMACVelocity(x1, y1);
+                float x1 = x - dt * k0;
+                float y1 = y - dt * k0;
+                float k1 = SampleV(x1, y1);
 
                 // stage 2
-                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
-                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
-                Vector2 vel2 = SampleMACVelocity(x2, y2);
+                float x2 = x - dt * (0.25f * k0 + 0.25f * k1);
+                float y2 = y - dt * (0.25f * k0 + 0.25f * k1);
+                float vel2 = SampleV(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * vel2.X);
-                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * vel2.Y);
+                float xPrev = x - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
+                float yPrev = y - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
 
                 vNew[i, j] = SampleV(xPrev, yPrev);
             }
@@ -474,21 +483,21 @@ class EulerianSimulation
                 float y = j + 0.5f;
 
                 // backtrace (backward Euler) to find where the fluid at (x, y) came from
-                float k0 = SampleScalar(x, y);
+                Vector2 k0 = SampleMACVelocity(x, y);
 
                 // stage 1
-                float x1 = x - dt * k0;
-                float y1 = y - dt * k0;
-                float k1 = SampleScalar(x1, y1);
+                float x1 = x - dt * k0.X;
+                float y1 = y - dt * k0.Y;
+                Vector2 k1 = SampleMACVelocity(x1, y1);
 
                 // stage 2
-                float x2 = x - dt * (0.25f * k0 + 0.25f * k1);
-                float y2 = y - dt * (0.25f * k0 + 0.25f * k1);
-                float vel2 = SampleScalar(x2, y2);
+                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
+                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
+                Vector2 vel2 = SampleMACVelocity(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
-                float yPrev = y - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
+                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * vel2.X);
+                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * vel2.Y);
 
                 phiNew[i, j] = SampleScalar(xPrev, yPrev);
             }
@@ -625,10 +634,10 @@ class EulerianSimulation
         float sy = yv - j0;
 
         // sample the known velocities at the 4 surrounding points
-        float v00 = VelocityFieldY[i0, j0];
-        float v10 = VelocityFieldY[i1, j0];
-        float v01 = VelocityFieldY[i0, j1];
-        float v11 = VelocityFieldY[i1, j1];
+        float v00 = dye[i0, j0];
+        float v10 = dye[i1, j0];
+        float v01 = dye[i0, j1];
+        float v11 = dye[i1, j1];
 
         float vy0 = v00 + sx * (v10 - v00);
         float vy1 = v01 + sx * (v11 - v01);
@@ -652,6 +661,7 @@ class EulerianSimulation
         float maxSpeed = float.MinValue;
         float minDiv = float.MaxValue;
         float maxDiv = float.MinValue;
+        float totalDye = 0f;
 
 
         for (int x = 0; x < gridWidth; x++)
@@ -668,11 +678,14 @@ class EulerianSimulation
                 if (v < minSpeed) minSpeed = v;
                 if (u > maxSpeed) maxSpeed = u;
                 if (v > maxSpeed) maxSpeed = v;
+
+                totalDye += dye[x, y];
             }
 
 
         return new SimDrawData
         {
+            TotalDye = totalDye,
             MinDivergence = minDiv,
             MaxDivergence = maxDiv,
             MaxSpeed = maxSpeed,

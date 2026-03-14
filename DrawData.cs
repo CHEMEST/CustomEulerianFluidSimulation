@@ -15,6 +15,7 @@ namespace CustomEulerianFluidSimulation
     }
     record SimDrawData
     {
+        public float TotalDye { get; init; }
         public float MinDivergence { get; init; }
         public float MaxDivergence { get; init; }
         public float MaxSpeed { get; init; }

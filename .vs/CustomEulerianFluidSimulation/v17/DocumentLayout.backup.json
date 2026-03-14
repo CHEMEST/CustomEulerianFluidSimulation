@@ -26,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
@@ -36,9 +36,23 @@
               "RelativeDocumentMoniker": "App.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\App.cs",
               "RelativeToolTip": "App.cs",
-              "ViewState": "AgIAABEAAAAAAAAAAAAiwCMAAAAJAAAAAAAAAA==",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABEAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-22T18:59:20.524Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Eulerian Simulation.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
+              "RelativeDocumentMoniker": "Eulerian Simulation.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
+              "RelativeToolTip": "Eulerian Simulation.cs",
+              "ViewState": "AgIAAHcAAAAAAAAAAAAswH0AAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-10-21T19:06:53.537Z",
               "IsPinned": true,
               "EditorCaption": ""
             },
@@ -56,28 +70,16 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Eulerian Simulation.cs",
-              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
-              "RelativeDocumentMoniker": "Eulerian Simulation.cs",
-              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
-              "RelativeToolTip": "Eulerian Simulation.cs",
-              "ViewState": "AgIAANsBAAAAAAAAAAAWwOQBAAAvAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-10-21T19:06:53.537Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
               "DocumentIndex": 2,
               "Title": "Drawer.cs",
               "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Drawer.cs",
               "RelativeDocumentMoniker": "Drawer.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Drawer.cs",
               "RelativeToolTip": "Drawer.cs",
-              "ViewState": "AgIAAA4AAAAAAAAAAAAAwB8AAAA7AAAAAAAAAA==",
+              "ViewState": "AgIAABUAAAAAAAAAAAAQwCEAAAAYAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-27T02:14:36.457Z"
+              "WhenOpened": "2026-02-27T02:14:36.457Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -87,9 +89,10 @@
               "RelativeDocumentMoniker": "DrawData.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\DrawData.cs",
               "RelativeToolTip": "DrawData.cs",
-              "ViewState": "AgIAABUAAAAAAAAAAAA8wBsAAAAYAAAAAAAAAA==",
+              "ViewState": "AgIAAA4AAAAAAAAAAAAAwBoAAAAFAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-02-27T02:15:24.233Z"
+              "WhenOpened": "2026-02-27T02:15:24.233Z",
+              "EditorCaption": ""
             }
           ]
         }
