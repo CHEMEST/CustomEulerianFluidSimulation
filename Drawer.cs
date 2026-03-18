@@ -15,7 +15,7 @@ namespace CustomEulerianFluidSimulation
         private float cellSize;
         private float gridWidth;
         private float gridHeight;
-        private Vector2 _offSet = new Vector2(1, 1);
+        private Vector2 _offSet = new Vector2(0.75f);
         private const float eps = 1e-5f;
         public Drawer(int cellSize, float gridWidth, float gridHeight) 
         {
@@ -29,9 +29,9 @@ namespace CustomEulerianFluidSimulation
             foreach (CellDrawData cellData in cellDrawDatas)
             {
                 Vector2 pos = (cellData.Position + _offSet) * cellSize;
-                //DrawDivergence(pos, cellData.Divergence);
+                DrawDivergence(pos, cellData.Divergence);
                 DrawDye(pos, cellData.Dye);
-                //DrawCellVelocity(pos, cellData.CellVelocity);
+                DrawCellVelocity(pos, cellData.CellVelocity);
                 //DrawIndex(pos, cellData.Position);
                 //if (cellData.Type == CellType.Solid)
                 //{
@@ -60,7 +60,7 @@ namespace CustomEulerianFluidSimulation
         private void DrawDye(Vector2 pos, float dye)
         {
 
-            Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, new Raylib_cs.Color(dye, dye, dye));
+            Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, new Raylib_cs.Color(dye, dye, dye, 0.5f));
         }
 
         private void DrawIndex(Vector2 pos, Vector2 index)
@@ -76,7 +76,7 @@ namespace CustomEulerianFluidSimulation
                 Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.White);
                 d += 40;
             }
-            Raylib.DrawRectangle(5, 5, 300, 40 + 40 * 6, new Raylib_cs.Color(0, 0, 0, 0.75f));
+            Raylib.DrawRectangle(0, 0, 180, 40 + 40 * 6, new Raylib_cs.Color(0, 0, 0, 0.75f));
             Stat("steps", steps);
             Stat("dt", data.dt);
             Stat("Max|u|", data.MaxSpeed);
@@ -184,12 +184,12 @@ namespace CustomEulerianFluidSimulation
         }
         private void DrawCellVelocity(Vector2 pos, Vector2 velocity)
         {
-            int scale = 1;
+            int scale = 10;
             int offset = (int)(cellSize / 2);
             pos += new Vector2(offset, offset);
             Vector2 endPos = new Vector2(
-                (pos.X + velocity.X),
-                (pos.Y + velocity.Y)) * scale;
+                (pos.X + velocity.X * scale),
+                (pos.Y + velocity.Y  * scale));
 
             Raylib.DrawLineEx(pos,
                             endPos,
