@@ -21,7 +21,7 @@ namespace CustomEulerianFluidSimulation
         private const int WindowWidth = 800;
         private const int WindowHeight = 800;
         // Simulation Values
-        private const int cellSize = 20;
+        private const int cellSize = 15;
         private readonly EulerianSimulation simulation;
         private readonly Drawer drawer;
         private static int steps = 0;
@@ -65,6 +65,9 @@ namespace CustomEulerianFluidSimulation
                 {
                     app.simulation.ResetSim();
                     steps = 0;
+                } else if (Raylib.IsKeyPressed(KeyboardKey.I))
+                {
+                    app.simulation.InjectAndPerturb();
                 }
                 else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
                 {

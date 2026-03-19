@@ -35,7 +35,7 @@ namespace CustomEulerianFluidSimulation
                 //DrawIndex(pos, cellData.Position);
                 //if (cellData.Type == CellType.Solid)
                 //{
-                //    DrawSquareCell(pos);
+                DrawSquareCell(pos);
                 //}
             }
             //for (int i = 0; i <= gridWidth; i++)
@@ -79,7 +79,7 @@ namespace CustomEulerianFluidSimulation
             Raylib.DrawRectangle(0, 0, 180, 40 + 40 * 6, new Raylib_cs.Color(0, 0, 0, 0.75f));
             Stat("steps", steps);
             Stat("dt", data.dt);
-            Stat("Max|u|", data.MaxSpeed);
+            Stat("Max|u,v|", data.MaxSpeed);
             Stat("MinDiv", data.MinDivergence);
             Stat("MaxDiv", data.MaxDivergence);
             Stat("Dye", data.TotalDye);
@@ -164,7 +164,7 @@ namespace CustomEulerianFluidSimulation
         }
         private void DrawSquareCell(Vector2 pos)
         {
-            Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.White);
+            Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, new Raylib_cs.Color(1, 1, 1, 0.1f));
         }
         private void DrawVelocityU(Vector2 pos, float velocity)
         {

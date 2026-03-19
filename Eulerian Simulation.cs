@@ -22,8 +22,10 @@ class EulerianSimulation
     private readonly int gridHeight;
 
     private readonly int pressureIters = 60;
-    private readonly float SORterm = 1.95f; // others recommend 1.7-1.8 for optimal convergence;; 1.95 converges in ~3 steps for this sim. >1.95 explodes
+    private readonly float SORterm = 1.95f; // others recommend 1.7-1.8 for optimal convergence; 1.95 converges in ~3 steps for this sim. >1.95 explodes
     private readonly float inkSize = 10f;
+    private readonly Vector2 g = new Vector2(0, 1f); // gravity
+    private readonly float maxAllowedDt = 10f;
 
     /// <summary>
     /// Staggered grid setup (MAC)
@@ -42,9 +44,7 @@ class EulerianSimulation
     private float[,] pressure; // per cell
     private CellType[,] type; // per cell
 
-    // Simulation Constants
     Random random = new Random();
-    private readonly Vector2 g = new Vector2(0, 1f); // gravity
 
     // Statistics | Debug
     public float dt = 0f;
@@ -88,61 +88,56 @@ class EulerianSimulation
     }
     public void ResetSim()
     {
-        float scale = 1f;
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                VelocityFieldX[i, j] = ((float)random.NextDouble() - 0.5f) * scale;
+                VelocityFieldX[i, j] = 0f;
 
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
-                VelocityFieldY[i, j] = ((float)random.NextDouble() - 0.5f) * scale;
+                VelocityFieldY[i, j] = 0f;
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                ink[i, j] = i > gridWidth/2 - inkSize && i < gridWidth/2 + inkSize && j > gridHeight/2 - inkSize && j < gridHeight/2 + inkSize ? (Math.Clamp( (float)random.NextDouble(), 0.5f, 0.5f)) : 0f;
-
+            {
+                pressure[i, j] = 0f;
+                ink[i, j] = 0f;
+            }
 
         ComputeDivergence();
     }
+    public void InjectAndPerturb()
+    {
+        int x = (int) (random.NextDouble() * gridWidth) / 2;
+        int y = (int) (random.NextDouble() * gridHeight) / 2;
+        for (int i = gridWidth / 4; i < x + gridWidth/4 && i < gridWidth; i++)
+        {
+            for (int j = gridHeight / 4; j < y + gridHeight/4 && j<gridHeight; j++)
+            {
+                VelocityFieldX[i, j] = 1f;
+                VelocityFieldY[i, j] = 1f;
+                ink[i, j] = 1;
+            }
+        }
+    }
     public void Update(float deltaTime)
     {
-        //dt = 0.01f;
+        //dt = 0.8f;
         dt = CalculateTimeStep();
 
-        //ApplyBodyForces(dt);
         EnforceBoundaries();
-        
+
+        ApplyBodyForces(dt);
         AdvectVelocityRK3(dt);
+        EnforceBoundaries();
 
         ComputeDivergence();
         ComputePoissonPressure(dt);
         ProjectPressure(dt);
 
-        EnforceBoundaries();
         ComputeDivergence();
 
         RK3BFECCAdvectionScalar(ink, dt);
     }
 
-    private void RK3BFECCAdvectionScalar(float[,] phi, float dt)
-    {
-        float[,] BFECCtemp = new float[gridWidth, gridHeight];
-        // 1) Store initial field
-        for (int i = 0; i < gridWidth; i++)
-            for (int j = 0; j < gridHeight; j++)
-                BFECCtemp[i, j] = phi[i, j];
-        // 2) Forward step
-        AdvectScalarFieldRK3(phi, dt);
-        // 3) Backward step
-        AdvectScalarFieldRK3(phi, -dt);
-        // 4) Error estimation and correction
-        for (int i = 0; i < gridWidth; i++)
-            for (int j = 0; j < gridHeight; j++)
-            {
-                float error = BFECCtemp[i, j] - phi[i, j];
-                phi[i, j] = BFECCtemp[i, j] + 0.5f * error;
-            }
-        AdvectScalarFieldRK3(phi, dt); // Final forward step with corrected values
-    }
 
     private float CalculateTimeStep()
     {
@@ -154,9 +149,13 @@ class EulerianSimulation
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j < gridHeight + 1; j++)
                 vMax = Math.Max(vMax, Math.Abs(VelocityFieldY[i, j]));
+        float maxVel = Math.Max(uMax, vMax);
+        if (maxVel < 1e-6f) return maxAllowedDt;
+
         // Bridson derives alpha * h / maxU, but since our h = 1 in world coordinates, we can just do alpha / maxU.
         // The alpha is just a safety factor to ensure stability; tune it as needed.
-        return 0.1f / Math.Max(uMax, vMax);
+        float alpha = 0.5f; // CFL safety factor; Shu-Osher RK3 is stable to 1.0, 0.5 is conservative
+        return alpha / maxVel;
     }
     private bool IsSolidCell(int i, int j)
     {
@@ -214,13 +213,7 @@ class EulerianSimulation
 
     private void ApplyBodyForces(float dt)
     {
-        for (int i = 0; i < gridWidth; i++)
-        {
-            for (int j = 0; j < gridHeight; j++)
-            {
-                VelocityFieldY[i, j] +=  g.Y * dt;
-            }
-        }
+
     }
     /// <summary>
     /// Laplacian of pressure = the sum of the pressures in the S neighboring faces - S * pressure in the current cell.
@@ -420,21 +413,21 @@ class EulerianSimulation
                 float y = j + 0.5f;
 
                 // backtrace (backward Euler) to find where the fluid at (x, y) came from
-                float k0 = SampleU(x, y);
+                Vector2 k0 = SampleMACVelocity(x, y);
 
                 // stage 1
-                float x1 = x - dt * k0;
-                float y1 = y - dt * k0;
-                float k1 = SampleU(x1, y1);
+                float x1 = x - dt * k0.X;
+                float y1 = y - dt * k0.Y;
+                Vector2 k1 = SampleMACVelocity(x1, y1);
 
                 // stage 2
-                float x2 = x - dt * (0.25f * k0 + 0.25f * k1);
-                float y2 = y - dt * (0.25f * k0 + 0.25f * k1);
-                float vel2 = SampleU(x2, y2);
+                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
+                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
+                Vector2 k2 = SampleMACVelocity(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
-                float yPrev = y - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
+                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * k2.X);
+                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * k2.Y);
 
                 // sample OLD u-field at that backtraced position
                 // We avoid in-place updates because the velocity field is used for backtracing, and if we update it in-place,
@@ -453,21 +446,21 @@ class EulerianSimulation
                 float y = j;
 
                 // backtrace (backward Euler) to find where the fluid at (x, y) came from
-                float k0 = SampleV(x, y);
-
+                Vector2 k0 = SampleMACVelocity(x, y);
+                
                 // stage 1
-                float x1 = x - dt * k0;
-                float y1 = y - dt * k0;
-                float k1 = SampleV(x1, y1);
+                float x1 = x - dt * k0.X;
+                float y1 = y - dt * k0.Y;
+                Vector2 k1 = SampleMACVelocity(x1, y1);
 
                 // stage 2
-                float x2 = x - dt * (0.25f * k0 + 0.25f * k1);
-                float y2 = y - dt * (0.25f * k0 + 0.25f * k1);
-                float vel2 = SampleV(x2, y2);
+                float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
+                float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
+                Vector2 k2 = SampleMACVelocity(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
-                float yPrev = y - dt * ((1f / 6f) * k0 + (1f / 6f) * k1 + (4f / 6f) * vel2);
+                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * k2.X);
+                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * k2.Y);
 
                 vNew[i, j] = SampleV(xPrev, yPrev);
             }
@@ -501,19 +494,49 @@ class EulerianSimulation
                 // stage 2
                 float x2 = x - dt * (0.25f * k0.X + 0.25f * k1.X);
                 float y2 = y - dt * (0.25f * k0.Y + 0.25f * k1.Y);
-                Vector2 vel2 = SampleMACVelocity(x2, y2);
+                Vector2 k2 = SampleMACVelocity(x2, y2);
 
                 // final
-                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * vel2.X);
-                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * vel2.Y);
+                float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * k2.X);
+                float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * k2.Y);
 
                 phiNew[i, j] = SampleScalar(xPrev, yPrev);
-            }
+            }   
 
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
                 ink[i, j] = phiNew[i, j];
 
+    }
+    private void RK3BFECCAdvectionScalar(float[,] phi, float dt)
+    {
+        float[,] BFECCtemp = new float[gridWidth, gridHeight];
+        // 0) min/max finding
+        float max = phi.Cast<float>().Max();
+        float min = phi.Cast<float>().Min();
+        // 1) Store initial field
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+            {
+                BFECCtemp[i, j] = phi[i, j];
+            }
+        // 2) Forward step
+        AdvectScalarFieldRK3(phi, dt);
+        // 3) Backward step
+        AdvectScalarFieldRK3(phi, -dt);
+        // 4) Error estimation and correction
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+            {
+                float error = BFECCtemp[i, j] - phi[i, j];
+                phi[i, j] = BFECCtemp[i, j] + 0.5f * error;
+            }
+        // 5) clamp within old range
+        for (int i = 0; i < gridWidth; i++)
+            for (int j = 0; j < gridHeight; j++)
+                phi[i,j] = Math.Clamp(phi[i,j], min, max);
+        // 6) Step with corrected field
+        AdvectScalarFieldRK3(phi, dt);
     }
 
 
@@ -690,6 +713,8 @@ class EulerianSimulation
         float minDiv = float.MaxValue;
         float maxDiv = float.MinValue;
         float totalDye = 0f;
+        int wx = 0;
+        int wy = 0;
 
 
         for (int x = 0; x < gridWidth; x++)
@@ -700,16 +725,14 @@ class EulerianSimulation
                 if (d > maxDiv) maxDiv = d;
 
                 Vector2 vel = new Vector2(VelocityFieldX[x, y], VelocityFieldY[x, y]); // technically is not searching every face since it is MAC
-                float u = Math.Abs(vel.X);
-                float v = Math.Abs(vel.Y);
-                if (u < minSpeed) minSpeed = u;
-                if (v < minSpeed) minSpeed = v;
-                if (u > maxSpeed) maxSpeed = u;
-                if (v > maxSpeed) maxSpeed = v;
+                float speed = vel.Length();
+                if (speed < minSpeed) { minSpeed = speed;  }
+                    if (speed > maxSpeed) { maxSpeed = speed; wx = x; wy = y; }
+
 
                 totalDye += ink[x, y];
             }
-
+        Console.WriteLine("MaxSpeed at " + wx + "|" + wy);
 
         return new SimDrawData
         {
