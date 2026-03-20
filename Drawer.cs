@@ -30,8 +30,8 @@ namespace CustomEulerianFluidSimulation
             foreach (CellDrawData cellData in cellDrawDatas)
             {
                 Vector2 pos = (cellData.Position + _offSet) * cellSize;
-                DrawDivergence(pos, cellData.Divergence);
                 DrawDye(pos, cellData.ink);
+                DrawDivergence(pos, cellData.Divergence);
                 if (ShowVelocityVectors) DrawCellVelocity(pos, cellData.CellVelocity);
                 //DrawIndex(pos, cellData.Position);
                 //if (cellData.Type == CellType.Solid)
@@ -122,44 +122,22 @@ namespace CustomEulerianFluidSimulation
         // ChatGPT helped me write this function to visualize the divergence field with a nice color mapping.
         private void DrawDivergence(Vector2 pos, float div)
         {
-            // commented this out since borders should have div=0 anyway, and it's more interesting to see the color mapping even for solids. Also we can add a black border on top to make them visually distinct if needed.
-            //if (type != CellType.Fluid)
-            //{
-            //    Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, Raylib_cs.Color.Black);
-            //    return;
-            //}
-
-            // A fixed reference scale for what you consider "large" divergence.
-            // Tune this once and then your colors are comparable across time.
-            // Rule of thumb: start near typical post-projection residual you want to visualize.
             const float divScale = 0.1f;
-
             float mag = MathF.Abs(div);
-
-            // Map magnitude to [0, 1) smoothly without needing maxDiv.
-            // - linear near 0
-            // - saturates for large magnitudes
             float a = MathF.Tanh(mag / divScale);
-
-            // Direction -> hue (fixed endpoints).
-            float hue = (div >= 0f) ? 342f : 215f; // red or blue
-
-            // Magnitude -> saturation + value (brightness).
-            // Near zero: dark gray-ish (low saturation, low value)
-            // Large: vivid and bright
+            float hue = (div >= 0f) ? 342f : 215f;
             float sat = 0.15f + 0.85f * a;
             float val = 0.10f + 0.90f * a;
 
-            // Optional: dead-zone to make near-zero cells clearly neutral.
-            // Use eps as your "close enough to zero" threshold.
             if (mag <= eps)
             {
                 sat = 0.0f;
-                val = 0.10f; // dark neutral
-                hue = 0f;    // irrelevant when sat = 0
+                val = 0.10f;
+                hue = 0f;
             }
 
             Raylib_cs.Color color = Raylib.ColorFromHSV(hue, sat, val);
+            color.A = (byte)(0.2f * 255);
             Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
         }
         private void DrawSquareCell(Vector2 pos)

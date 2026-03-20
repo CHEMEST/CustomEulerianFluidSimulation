@@ -27,6 +27,7 @@ class EulerianSimulation
     private readonly int marginFactor = 8;
     private readonly Vector2 g = new Vector2(0, 1f); // gravity
     private readonly float maxAllowedDt = 10f;
+    private readonly float vorticity = 1f;
 
     /// <summary>
     /// Staggered grid setup (MAC)
@@ -138,28 +139,49 @@ class EulerianSimulation
                 inkB[i, j] = (float)random.NextDouble();
             }
         }
-    }
+    } 
     public void Update(float deltaTime)
     {
         //dt = 0.8f;
         dt = CalculateTimeStep();
 
-        EnforceBoundaries();
+        //ApplyBodyForces(dt);
+        VorticityConfinement(dt, vorticity);
 
-        ApplyBodyForces(dt);
+        EnforceBoundaries();
         RK3BFECCAdvection(dt);
         EnforceBoundaries();
 
         ComputeDivergence();
         ComputePoissonPressure(dt);
         ProjectPressure(dt);
+        EnforceBoundaries();
 
         ComputeDivergence();
 
         RK3BFECCAdvectionScalar(inkR, dt);
         RK3BFECCAdvectionScalar(inkB, dt);
     }
+    // VC is basically just adding a force that pushes the fluid to swirl more in areas of high vorticity, which enhances the small-scale swirling motion and makes the fluid look more lively.
+    // It's a common technique in fluid sims to counteract numerical dissipation and add visual interest.
+    // NOTE: it is not physically derived. This is to make it more visually interesting and is not usually used in engineering CFD
+    //
+    // Goal: add a force that pushes the fluid to swirl more in areas of high vorticity.
+    // Vorticity is the curl of the velocity field so: w = \del \dot u
+    // In 2D, this simplifies to w = dv/dx - du/dy
+    // Magnitude in 2D (scalar): |w| = sqrt(w^2) = abs(w)
+    // Gradient of vorticity (field): grad|w| = (dw/dx, dw/dy)
+    //      this points outward from the vortex center
+    // Normalize: N = grad|w| / |grad|w|
+    //      We do this for more control instead of following the strength of the vortex
+    // Vorticity confinement force: f = k * (N x w); in 2D, N x w = (N.y * w, -N.x * w).
+    //      crossing the outward and the vorticity gives a vector that points tangentially to the swirl
+    //      k is a user-defined strength of the confinement (vorticity parameter) * h (cell size, which is 1 in our world coordinates) to keep it consistent across different grid resolutions.
+    // Average force at cells adjacent to faces and add to velocity field as a body force since MAC makes this math easier for cell centered forces
+    private void VorticityConfinement(float dt, float vorticity)
+    {
 
+    }
 
     private float CalculateTimeStep()
     {

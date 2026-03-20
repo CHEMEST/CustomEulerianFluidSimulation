@@ -26,7 +26,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 4,
           "Children": [
             {
               "$type": "Document",
@@ -36,23 +36,10 @@
               "RelativeDocumentMoniker": "App.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\App.cs",
               "RelativeToolTip": "App.cs",
-              "ViewState": "AgIAADgAAAAAAAAAAAApwFAAAAARAAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAuwBAAAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-10-22T18:59:20.524Z",
               "IsPinned": true,
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Eulerian Simulation.cs",
-              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
-              "RelativeDocumentMoniker": "Eulerian Simulation.cs",
-              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
-              "RelativeToolTip": "Eulerian Simulation.cs",
-              "ViewState": "AgIAAK8AAAAAAAAAAAAuwLMAAAA2AAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-03-20T02:44:25.373Z",
               "EditorCaption": ""
             },
             {
@@ -69,13 +56,26 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Eulerian Simulation.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
+              "RelativeDocumentMoniker": "Eulerian Simulation.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Eulerian Simulation.cs",
+              "RelativeToolTip": "Eulerian Simulation.cs",
+              "ViewState": "AgIAAKEAAAAAAAAAAAAowKcAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-03-20T02:44:25.373Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 2,
               "Title": "Drawer.cs",
               "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Drawer.cs",
               "RelativeDocumentMoniker": "Drawer.cs",
               "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\C#\\CustomEulerianFluidSimulation\\Drawer.cs",
               "RelativeToolTip": "Drawer.cs",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAYwBIAAAA+AAAAAAAAAA==",
+              "ViewState": "AgIAAAcAAAAAAAAAAAAQwBcAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-02-27T02:14:36.457Z",
               "EditorCaption": ""
