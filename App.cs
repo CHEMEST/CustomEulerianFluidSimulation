@@ -65,19 +65,22 @@ namespace CustomEulerianFluidSimulation
                 {
                     app.simulation.ResetSim();
                     steps = 0;
-                } else if (Raylib.IsKeyPressed(KeyboardKey.I))
-                {
-                    app.simulation.InjectAndPerturb();
-                }
-                else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
-                {
-                    app.Update();
-                }
-                else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                }else if (Raylib.IsKeyPressed(KeyboardKey.Space))
                 {
                     simulating = !simulating;
-                }
-                else if (Raylib.IsKeyPressed(KeyboardKey.LeftShift))
+                }else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
+                {
+                    app.Update();
+                }else if (Raylib.IsKeyPressed(KeyboardKey.I))
+                {
+                    app.simulation.InjectAndPerturbRed();
+                }else if (Raylib.IsKeyPressed(KeyboardKey.K))
+                {
+                    app.simulation.InjectAndPerturbBlue();
+                }else if (Raylib.IsKeyPressed(KeyboardKey.V))
+                {
+                    app.drawer.ShowVelocityVectors = !app.drawer.ShowVelocityVectors;
+                }else if (Raylib.IsKeyPressed(KeyboardKey.LeftShift))
                 {
                     app.slowDown = !app.slowDown;
                     Raylib.SetTargetFPS(app.slowDown ? 10 : 60);

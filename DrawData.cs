@@ -26,7 +26,8 @@ namespace CustomEulerianFluidSimulation
     record CellDrawData
     {
         public float Divergence { get; init; }
-        public float Dye { get; init; }
+        public Vector3 ink { get; init; }
+
         public Vector2 CellVelocity { get; init; }
         public CellType Type { get; init; }
         public Vector2 Position { get; init; } // indices of the cell, not world position
