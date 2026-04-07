@@ -27,7 +27,6 @@ class EulerianSimulation
     private readonly int marginFactor = 8;
     private readonly Vector2 g = new Vector2(0, 1f); // gravity
     private readonly float maxAllowedDt = 10f;
-    private readonly float vorticity = 1f;
 
     /// <summary>
     /// Staggered grid setup (MAC)
@@ -46,6 +45,9 @@ class EulerianSimulation
     private float[,] divergence; // per cell
     private float[,] pressure; // per cell
     private CellType[,] type; // per cell
+    // for vorticity confinement
+    float[,] omega;
+    float[,] mag;
 
     Random random = new Random();
 
@@ -69,6 +71,8 @@ class EulerianSimulation
         pressure = new float[gridWidth, gridHeight];
         inkR = new float[gridWidth, gridHeight];
         inkB = new float[gridWidth, gridHeight];
+        omega = new float[gridWidth, gridHeight];
+        mag = new float[gridWidth, gridHeight];
 
         phiNew = new float[gridWidth, gridHeight];
         type = new CellType[gridWidth, gridHeight];
@@ -146,14 +150,14 @@ class EulerianSimulation
         dt = CalculateTimeStep();
 
         //ApplyBodyForces(dt);
-        VorticityConfinement(dt, vorticity);
+        VorticityConfinement(dt, vorticity); // non-physically derived force
 
         EnforceBoundaries();
-        RK3BFECCAdvection(dt);
+        RK3BFECCAdvection(dt); // Bottleneck 2
         EnforceBoundaries();
 
         ComputeDivergence();
-        ComputePoissonPressure(dt);
+        ComputePoissonPressure(dt); // Bottleneck 1
         ProjectPressure(dt);
         EnforceBoundaries();
 
@@ -167,7 +171,7 @@ class EulerianSimulation
     // NOTE: it is not physically derived. This is to make it more visually interesting and is not usually used in engineering CFD
     //
     // Goal: add a force that pushes the fluid to swirl more in areas of high vorticity.
-    // Vorticity is the curl of the velocity field so: w = \del \dot u
+    // Vorticity is the curl of the velocity field so: w = \del \cross u
     // In 2D, this simplifies to w = dv/dx - du/dy
     // Magnitude in 2D (scalar): |w| = sqrt(w^2) = abs(w)
     // Gradient of vorticity (field): grad|w| = (dw/dx, dw/dy)
@@ -180,9 +184,36 @@ class EulerianSimulation
     // Average force at cells adjacent to faces and add to velocity field as a body force since MAC makes this math easier for cell centered forces
     private void VorticityConfinement(float dt, float vorticity)
     {
+        
+        // Step 1, 2: compute vorticity and its magnitude at cell centers. We can skip the boundaries since we'll just set the confinement force to zero there anyway.
+        for (int i = 1; i < gridWidth - 1; i++)
+            for (int j = 1; j < gridHeight - 1; j++)
+            {
+                omega[i, j] = (VelocityFieldY[i + 1, j] - VelocityFieldY[i, j]) - (VelocityFieldX[i, j + 1] - VelocityFieldX[i, j]);
+                mag[i, j] = Math.Abs(omega[i, j]);
+            }
+        // Step 3,4,5
+        for (int i = 1; i < gridWidth - 1 ; i++)
+            for (int j = 1; j < gridHeight - 1 ; j++)
+            {
+                float dw_dx = (mag[i + 1, j] - mag[i - 1, j]) / 2f;
+                float dw_dy = (mag[i, j + 1] - mag[i, j - 1]) / 2f;
+                float gradMag = (float)Math.Sqrt(dw_dx * dw_dx + dw_dy * dw_dy);
+                if (gradMag < 1e-6f) continue; // avoid division by zero and skip if there's no significant vorticity
+                float Nx = dw_dx / gradMag;
+                float Ny = dw_dy / gradMag;
 
+                // confinement force at cell center
+                float fx = vorticity * (Ny * omega[i, j]);
+                float fy = vorticity * (-Nx * omega[i, j]);
+
+                // apply half the force to each adjacent face (since the force is at the cell center and we want to distribute it to the faces)
+                VelocityFieldX[i, j] += fx * dt / 2f; // right face of cell (i, j)
+                VelocityFieldX[i + 1, j] += fx * dt / 2f; // left face of cell (i+1, j)
+                VelocityFieldY[i, j] += fy * dt / 2f; // top face of cell (i, j)
+                VelocityFieldY[i, j + 1] += fy * dt / 2f; // bottom face of cell (i, j+1)
+            }
     }
-
     private float CalculateTimeStep()
     {
         float uMax = 0f;
