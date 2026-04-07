@@ -27,6 +27,7 @@ class EulerianSimulation
     private readonly int marginFactor = 8;
     private readonly Vector2 g = new Vector2(0, 1f); // gravity
     private readonly float maxAllowedDt = 10f;
+    private readonly float vorticity = 1f; // strength of vorticity confinement
 
     /// <summary>
     /// Staggered grid setup (MAC)
@@ -137,8 +138,8 @@ class EulerianSimulation
         {
             for (int j = gridHeight / marginFactor; j < y + gridHeight / marginFactor && j < gridHeight; j++)
             {
-                VelocityFieldX[i, j] = 10 * (float)random.NextDouble();
-                VelocityFieldY[i, j] = 10 * (float)random.NextDouble();
+                //VelocityFieldX[i, j] = 10 * (float)random.NextDouble();
+                //VelocityFieldY[i, j] = 10 * (float)random.NextDouble();
 
                 inkB[i, j] = (float)random.NextDouble();
             }
@@ -149,7 +150,7 @@ class EulerianSimulation
         //dt = 0.8f;
         dt = CalculateTimeStep();
 
-        //ApplyBodyForces(dt);
+        ApplyBodyForces(dt);
         VorticityConfinement(dt, vorticity); // non-physically derived force
 
         EnforceBoundaries();
@@ -288,7 +289,13 @@ class EulerianSimulation
 
     private void ApplyBodyForces(float dt)
     {
-
+        for (int i = 0; i < gridWidth; i++)
+        {
+            for (int j = 0; j < gridHeight; j++)
+            {
+                VelocityFieldY[i, j] += g.Y * dt;
+            }
+        }
     }
     /// <summary>
     /// Laplacian of pressure = the sum of the pressures in the S neighboring faces - S * pressure in the current cell.
