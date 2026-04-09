@@ -18,8 +18,8 @@ namespace CustomEulerianFluidSimulation
     class App
     {
         // Core Constants
-        private const int WindowWidth = 800;
-        private const int WindowHeight = 800;
+        private const int WindowWidth = 960;
+        private const int WindowHeight = 960;
         // Simulation Values
         private const int cellSize = 15;
         private readonly EulerianSimulation simulation;

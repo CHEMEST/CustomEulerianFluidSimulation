@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Linq;
 using CustomEulerianFluidSimulation;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 // World/grid coordinates: the actual coordinates of the simulation, where each cell is 1 unit.
 // This is what we use for all the physics calculations since it makes more sense to have a consistent unit system for that.
@@ -25,20 +26,24 @@ class EulerianSimulation
     private readonly float SORterm = 1.95f; // others recommend 1.7-1.8 for optimal convergence; 1.95 converges in ~3 steps for this sim. >1.95 explodes
     private readonly float inkSize = 10f;
     private readonly int marginFactor = 8;
-    private readonly Vector2 g = new Vector2(0, 1f); // gravity
+    private readonly Vector2 g = new Vector2(0, 9.8f); // gravity
     private readonly float maxAllowedDt = 10f;
-    private readonly float vorticity = 1f; // strength of vorticity confinement
+    private readonly float vorticity = 0.35f; // strength of vorticity confinement
 
     /// <summary>
     /// Staggered grid setup (MAC)
     /// </summary>
-    public float[,] VelocityFieldX { get; private set; } // I'll reference this as "U" or "u" since it's the x-velocity, but it's really the velocity on the vertical faces of the grid cells. Size (W+1, H)
-    private float[,] uNew; // for storing results of advection before swapping into velocityFieldX
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref float U(int i, int j) => ref VelocityFieldX[i * gridWidth + j];
+    public float[] VelocityFieldX { get; private set; } // I'll reference this as "U" or "u" since it's the x-velocity, but it's really the velocity on the vertical faces of the grid cells. Size (W+1, H)
+    private float[] uNew; // for storing results of advection before swapping into velocityFieldX
     /// <summary>
     /// Staggered grid setup (MAC)
     /// </summary>
-    public float[,] VelocityFieldY { get; private set; } // I'll reference this as "V" or "v" since it's the y-velocity, but it's really the velocity on the horizontal faces of the grid cells. Size (W, H+1)
-    private float[,] vNew; // for storing results of advection before swapping into velocityFieldY
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref float V(int i, int j) => ref VelocityFieldY[i * gridWidth + j];
+    public float[] VelocityFieldY { get; private set; } // I'll reference this as "V" or "v" since it's the y-velocity, but it's really the velocity on the horizontal faces of the grid cells. Size (W, H+1)
+    private float[] vNew; // for storing results of advection before swapping into velocityFieldY
 
     private float[,] inkR; // scalar per cell
     private float[,] inkB; // scalar per cell
@@ -63,10 +68,10 @@ class EulerianSimulation
         this.gridWidth = width;
         this.gridHeight = height;
         // 2D arrays are created column, row since it's an array inside an array.
-        VelocityFieldX = new float[gridWidth + 1, gridHeight]; // X velocities live on vertical edges, so we need an extra column (i, j+0.5)
-        VelocityFieldY = new float[gridWidth, gridHeight + 1]; // Y velocities live on horizontal edges, so we need an extra row (i+0.5, j)
-        uNew = new float[gridWidth + 1, gridHeight];
-        vNew = new float[gridWidth, gridHeight + 1];
+        VelocityFieldX = new float[(gridWidth + 1) * gridHeight]; // X velocities live on vertical edges, so we need an extra column (i, j+0.5)
+        VelocityFieldY = new float[gridWidth * (gridHeight + 1)]; // Y velocities live on horizontal edges, so we need an extra row (i+0.5, j)
+        uNew = new float[(gridWidth + 1) * gridHeight];
+        vNew = new float[gridWidth * (gridHeight + 1)];
 
         divergence = new float[gridWidth, gridHeight];
         pressure = new float[gridWidth, gridHeight];
@@ -100,11 +105,11 @@ class EulerianSimulation
     {
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                VelocityFieldX[i, j] = 0f;
+                U(i, j) = 0f;
 
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
-                VelocityFieldY[i, j] = 0f;
+                V(i, j) = 0f;
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
             {
@@ -123,8 +128,8 @@ class EulerianSimulation
         {
             for (int j = gridHeight / marginFactor; j < y + gridHeight/marginFactor && j<gridHeight; j++)
             {
-                VelocityFieldX[i, j] = 10 * (float)random.NextDouble();
-                VelocityFieldY[i, j] = 10 * (float) random.NextDouble();
+                U(i, j) = 10 * (float)random.NextDouble();
+                V(i, j) = 10 * (float) random.NextDouble();
 
                 inkR[i, j] = (float) random.NextDouble();
             }
@@ -138,8 +143,8 @@ class EulerianSimulation
         {
             for (int j = gridHeight / marginFactor; j < y + gridHeight / marginFactor && j < gridHeight; j++)
             {
-                //VelocityFieldX[i, j] = 10 * (float)random.NextDouble();
-                //VelocityFieldY[i, j] = 10 * (float)random.NextDouble();
+                //U(i, j) = 10 * (float)random.NextDouble();
+                //V(i, j) = 10 * (float)random.NextDouble();
 
                 inkB[i, j] = (float)random.NextDouble();
             }
@@ -150,7 +155,7 @@ class EulerianSimulation
         //dt = 0.8f;
         dt = CalculateTimeStep();
 
-        ApplyBodyForces(dt);
+        //ApplyBodyForces(dt);
         VorticityConfinement(dt, vorticity); // non-physically derived force
 
         EnforceBoundaries();
@@ -190,7 +195,7 @@ class EulerianSimulation
         for (int i = 1; i < gridWidth - 1; i++)
             for (int j = 1; j < gridHeight - 1; j++)
             {
-                omega[i, j] = (VelocityFieldY[i + 1, j] - VelocityFieldY[i, j]) - (VelocityFieldX[i, j + 1] - VelocityFieldX[i, j]);
+                omega[i, j] = (V(i + 1, j) - V(i, j)) - (U(i, j + 1) - U(i, j));
                 mag[i, j] = Math.Abs(omega[i, j]);
             }
         // Step 3,4,5
@@ -209,10 +214,10 @@ class EulerianSimulation
                 float fy = vorticity * (-Nx * omega[i, j]);
 
                 // apply half the force to each adjacent face (since the force is at the cell center and we want to distribute it to the faces)
-                VelocityFieldX[i, j] += fx * dt / 2f; // right face of cell (i, j)
-                VelocityFieldX[i + 1, j] += fx * dt / 2f; // left face of cell (i+1, j)
-                VelocityFieldY[i, j] += fy * dt / 2f; // top face of cell (i, j)
-                VelocityFieldY[i, j + 1] += fy * dt / 2f; // bottom face of cell (i, j+1)
+                U(i, j) += fx * dt / 2f; // right face of cell (i, j)
+                U(i + 1, j) += fx * dt / 2f; // left face of cell (i+1, j)
+                V(i, j) += fy * dt / 2f; // top face of cell (i, j)
+                V(i, j + 1) += fy * dt / 2f; // bottom face of cell (i, j+1)
             }
     }
     private float CalculateTimeStep()
@@ -220,11 +225,11 @@ class EulerianSimulation
         float uMax = 0f;
         for (int i = 0; i < gridWidth + 1; i++)
             for (int j = 0; j < gridHeight; j++)
-                uMax = Math.Max(uMax, Math.Abs(VelocityFieldX[i, j]));
+                uMax = Math.Max(uMax, Math.Abs(U(i, j)));
         float vMax = 0f;
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j < gridHeight + 1; j++)
-                vMax = Math.Max(vMax, Math.Abs(VelocityFieldY[i, j]));
+                vMax = Math.Max(vMax, Math.Abs(V(i, j)));
         float maxVel = Math.Max(uMax, vMax);
         if (maxVel < 1e-6f) return maxAllowedDt;
 
@@ -248,8 +253,8 @@ class EulerianSimulation
         // 1) Hard domain boundaries: left wall u[0,*] and right wall u[W,*]
         for (int j = 0; j < gridHeight; j++)
         {
-            VelocityFieldX[0, j] = 0f;
-            VelocityFieldX[gridWidth, j] = 0f;
+            U(0, j) = 0f;
+            U(gridWidth, j) = 0f;
         }
 
         //// 2) Interior faces: if either adjacent cell is solid, zero it
@@ -269,8 +274,8 @@ class EulerianSimulation
         // 1) Hard domain boundaries: bottom wall v[* ,0] and top wall v[* ,H]
         for (int i = 0; i < gridWidth; i++)
         {
-            VelocityFieldY[i, 0] = 0f;
-            VelocityFieldY[i, gridHeight] = 0f;
+            V(i, 0) = 0f;
+            V(i, gridHeight) = 0f;
         }
 
         //// 2) Interior faces: if either adjacent cell is solid, zero it
@@ -293,7 +298,7 @@ class EulerianSimulation
         {
             for (int j = 0; j < gridHeight; j++)
             {
-                VelocityFieldY[i, j] += g.Y * dt;
+                V(i, j) += g.Y * dt;
             }
         }
     }
@@ -374,7 +379,7 @@ class EulerianSimulation
             {
                 //if (type[i, j] == CellType.Solid || type[i - 1, j] == CellType.Solid) continue; // skip faces adjacent to solids
                 float gradP = pressure[i, j] - pressure[i - 1, j];
-                VelocityFieldX[i, j] -= gradP * dt;
+                U(i, j) -= gradP * dt;
             }
         }
         // V faces: size (W, H+1), face between cells (i,j-1) and (i,j)
@@ -384,7 +389,7 @@ class EulerianSimulation
             {
                 //if (type[i, j] == CellType.Solid || type[i, j - 1] == CellType.Solid) continue; // skip faces adjacent to solids
                 float gradP = pressure[i, j] - pressure[i, j - 1];
-                VelocityFieldY[i, j] -= gradP * dt;
+                V(i, j) -= gradP * dt;
             }
         }
     }
@@ -411,8 +416,8 @@ class EulerianSimulation
                 // h = 1 since we're working in world coordinates where cell size is 1 unit,
                 // so we can just do the subtraction without dividing by h.
                 // We do this because working in world coords makes more sense in the computational bits; i.e. leave the screen stuff for drawing phase
-                divergence[i, j] = (VelocityFieldX[i + 1, j] - VelocityFieldX[i, j] +
-                        VelocityFieldY[i, j + 1] - VelocityFieldY[i, j]) / 1;
+                divergence[i, j] = (U(i + 1, j) - U(i, j) +
+                        V(i, j + 1) - V(i, j)) / 1;
             }
         }
     }
@@ -448,7 +453,7 @@ class EulerianSimulation
                 // we would be using some new and some old values during backtracing which would lead to contaminated/incorrect results.
                 // By using a separate array for the new velocities,
                 // we ensure that all backtracing is done using the original velocity field from the start of the time step and then later swapped.
-                uNew[i, j] = SampleU(xPrev, yPrev);
+                uNew[i * gridWidth + j] = SampleU(xPrev, yPrev);
             }
 
         // v faces: i = 0..W-1, j = 0..H
@@ -460,16 +465,16 @@ class EulerianSimulation
                 Vector2 vel = SampleMACVelocity(x, y);
                 float xPrev = x - dt * vel.X;
                 float yPrev = y - dt * vel.Y;
-                vNew[i, j] = SampleV(xPrev, yPrev);
+                vNew[i * gridWidth + j] = SampleV(xPrev, yPrev);
             }
 
         // swap new velocities into the main velocity fields
         for (int i = 1; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                VelocityFieldX[i, j] = uNew[i, j];
+                U(i, j) = uNew[i * gridWidth + j];
         for (int i = 0; i < gridWidth; i++)
             for (int j = 1; j <= gridHeight; j++)
-                VelocityFieldY[i, j] = vNew[i, j];
+                V(i, j) = vNew[i * gridWidth + j];
     }
     /// <summary>
     /// RK3 is just 3 steps of RK1 with intermediate velocity fields to get better accuracy.
@@ -516,7 +521,7 @@ class EulerianSimulation
                 // we would be using some new and some old values during backtracing which would lead to contaminated/incorrect results.
                 // By using a separate array for the new velocities,
                 // we ensure that all backtracing is done using the original velocity field from the start of the time step and then later swapped.
-                uNew[i, j] = SampleU(xPrev, yPrev);
+                uNew[i * gridWidth + j] = SampleU(xPrev, yPrev);
             }
 
         // v faces: i = 0..W-1, j = 0..H
@@ -544,16 +549,16 @@ class EulerianSimulation
                 float xPrev = x - dt * ((1f / 6f) * k0.X + (1f / 6f) * k1.X + (4f / 6f) * k2.X);
                 float yPrev = y - dt * ((1f / 6f) * k0.Y + (1f / 6f) * k1.Y + (4f / 6f) * k2.Y);
 
-                vNew[i, j] = SampleV(xPrev, yPrev);
+                vNew[i * gridWidth + j] = SampleV(xPrev, yPrev);
             }
 
         // swap new velocities into the main velocity fields
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                VelocityFieldX[i, j] = uNew[i, j];
+                U(i, j) = uNew[i * gridWidth + j];
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
-                VelocityFieldY[i, j] = vNew[i, j];
+                V(i, j) = vNew[i * gridWidth + j];
     }
 
     private void AdvectScalarFieldRK3(float[,] phi, float dt)
@@ -648,10 +653,10 @@ class EulerianSimulation
         // 1) Store initial fields
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                BFECCtempX[i, j] = VelocityFieldX[i, j];
+                BFECCtempX[i, j] = U(i, j);
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
-                BFECCtempY[i, j] = VelocityFieldY[i, j];
+                BFECCtempY[i, j] = V(i, j);
         // 2) Forward step
         AdvectVelocityRK3(dt);
         // 3) Backward step
@@ -660,24 +665,24 @@ class EulerianSimulation
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
             {
-                float error = BFECCtempX[i, j] - VelocityFieldX[i, j];
-                VelocityFieldX[i, j] = BFECCtempX[i, j] + 0.5f * error;
+                float error = BFECCtempX[i, j] - U(i, j);
+                U(i, j) = BFECCtempX[i, j] + 0.5f * error;
             }
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
             {
-                float error = BFECCtempY[i, j] - VelocityFieldY[i, j];
-                VelocityFieldY[i, j] = BFECCtempY[i, j] + 0.5f * error;
+                float error = BFECCtempY[i, j] - V(i, j);
+                V(i, j) = BFECCtempY[i, j] + 0.5f * error;
             }
         // 5) Step with corrected field
         AdvectVelocityRK3(dt);
         // 6) clamp within old range
         for (int i = 0; i <= gridWidth; i++)
             for (int j = 0; j < gridHeight; j++)
-                VelocityFieldX[i, j] = Math.Clamp(VelocityFieldX[i, j], FindMinWithinKernel(i, j, BFECCtempX, 1), FindMaxWithinKernel(i, j, BFECCtempX, 1));
+                U(i, j) = Math.Clamp(U(i, j), FindMinWithinKernel(i, j, BFECCtempX, 1), FindMaxWithinKernel(i, j, BFECCtempX, 1));
         for (int i = 0; i < gridWidth; i++)
             for (int j = 0; j <= gridHeight; j++)
-                VelocityFieldY[i, j] = Math.Clamp(VelocityFieldY[i, j], FindMinWithinKernel(i, j, BFECCtempY, 1), FindMaxWithinKernel(i, j, BFECCtempY, 1));
+                V(i, j) = Math.Clamp(V(i, j), FindMinWithinKernel(i, j, BFECCtempY, 1), FindMaxWithinKernel(i, j, BFECCtempY, 1));
 
     }
 
@@ -718,10 +723,10 @@ class EulerianSimulation
         float sx = x - i0;
         float sy = yu - j0;
 
-        float v00 = VelocityFieldX[i0, j0];
-        float v10 = VelocityFieldX[i1, j0];
-        float v01 = VelocityFieldX[i0, j1];
-        float v11 = VelocityFieldX[i1, j1];
+        float v00 = U(i0, j0);
+        float v10 = U(i1, j0);
+        float v01 = U(i0, j1);
+        float v11 = U(i1, j1);
 
         float vx0 = v00 + sx * (v10 - v00);
         float vx1 = v01 + sx * (v11 - v01);
@@ -768,10 +773,10 @@ class EulerianSimulation
         float sy = j - j0;
 
         // sample the known velocities at the 4 surrounding points
-        float v00 = VelocityFieldY[i0, j0];
-        float v10 = VelocityFieldY[i1, j0];
-        float v01 = VelocityFieldY[i0, j1];
-        float v11 = VelocityFieldY[i1, j1];
+        float v00 = V(i0, j0);
+        float v10 = V(i1, j0);
+        float v01 = V(i0, j1);
+        float v11 = V(i1, j1);
 
         // two linear interps: Vf = Vi + t * (dV); top and bottom rows of the surrounding grid square
         float vy0 = v00 + sx * (v10 - v00);
@@ -866,7 +871,7 @@ class EulerianSimulation
                 if (d < minDiv) minDiv = d;
                 if (d > maxDiv) maxDiv = d;
 
-                Vector2 vel = new Vector2(VelocityFieldX[x, y], VelocityFieldY[x, y]); // technically is not searching every face since it is MAC
+                Vector2 vel = new Vector2(U(x, y), V(x, y)); // technically is not searching every face since it is MAC
                 float speed = vel.Length();
                 if (speed < minSpeed) { minSpeed = speed;  }
                     if (speed > maxSpeed) { maxSpeed = speed; wx = x; wy = y; }

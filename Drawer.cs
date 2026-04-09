@@ -25,7 +25,7 @@ namespace CustomEulerianFluidSimulation
             this.gridHeight = gridHeight;
         }
 
-        public void DrawSim(SimDrawData simDrawData, CellDrawData[,] cellDrawDatas, float[,] u, float[,] v, int steps)
+        public void DrawSim(SimDrawData simDrawData, CellDrawData[,] cellDrawDatas, float[] u, float[] v, int steps)
         {            
             foreach (CellDrawData cellData in cellDrawDatas)
             {
@@ -44,7 +44,7 @@ namespace CustomEulerianFluidSimulation
             //    for (int j = 0; j < gridHeight; j++)
             //    {
             //        Vector2 pos = new Vector2((i + _offSet.X) * cellSize, (j + 0.5f + _offSet.Y) * cellSize);
-            //        DrawVelocityU(pos, u[i, j]);
+            //        DrawVelocityU(pos, u[i * gridWidth + j]);
             //    }
             //}
             //for (int i = 0; i < gridWidth; i++)
@@ -52,7 +52,7 @@ namespace CustomEulerianFluidSimulation
             //    for (int j = 0; j <= gridHeight; j++)
             //    {
             //        Vector2 pos = new Vector2((i + 0.5f + _offSet.X) * cellSize, (j + _offSet.Y) * cellSize);
-            //        DrawVelocityV(pos, v[i, j]);
+            //        DrawVelocityV(pos, v[i * gridWidth + j]);
             //    }
             //}
             DrawStatistics(simDrawData, steps);

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CustomEulerianFluidSimulation")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ead4f152673bc578684c1d16c0d338e482dad8e6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+67f1a5f319d5bd7db94e101ca7ca427a769fd05d")]
 [assembly: System.Reflection.AssemblyProductAttribute("CustomEulerianFluidSimulation")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CustomEulerianFluidSimulation")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
