@@ -13,32 +13,91 @@ namespace CustomEulerianFluidSimulation
     class Drawer
     {
         private float cellSize;
-        private float gridWidth;
-        private float gridHeight;
+        private int gridWidth;
+        private int gridHeight;
+        private int screenWidth;
+        private int screenHeight;
         private Vector2 _offSet = new Vector2(0.75f);
+
         public bool ShowVelocityVectors { get; set; } = false;
         private const float eps = 1e-5f;
-        public Drawer(int cellSize, float gridWidth, float gridHeight) 
+
+        private SimulationVideoWriter? writer;
+        private bool isRecording;
+
+        private Texture2D densityTex;
+        private Color[] pixels;
+        public Drawer(int cellSize, int gridWidth, int gridHeight, int screenWidth, int screenHeight) 
         {
             this.cellSize = cellSize;
             this.gridWidth = gridWidth;
             this.gridHeight = gridHeight;
+            this.screenWidth = screenWidth;
+            this.screenHeight = screenHeight;
+
+            Image img = Raylib.GenImageColor(gridWidth, gridHeight, Color.Black);
+            densityTex = Raylib.LoadTextureFromImage(img);
+            Raylib.UnloadImage(img);
+            Raylib.SetTextureFilter(densityTex, TextureFilter.Point); // sharp pixel blocks
+
+            pixels = new Color[gridWidth * gridHeight];
+        }
+
+        public void WriteFrameData(CellDrawData[,] cellDrawDatas)
+        {
+            if (isRecording && writer != null)
+            {
+                writer?.WriteFrame(
+                gridColors: cellDrawDatas.Cast<CellDrawData>().Select(cd => (
+                    R: (byte)(cd.Ink.X * 255),
+                    G: (byte)(cd.Ink.Y * 255),
+                    B: (byte)(cd.Ink.Z * 255)
+                )).ToArray()
+            );
+            }
         }
 
         public void DrawSim(SimDrawData simDrawData, CellDrawData[,] cellDrawDatas, float[] u, float[] v, int steps)
-        {            
-            foreach (CellDrawData cellData in cellDrawDatas)
+        {
+            unsafe
+            {
+                for (int i = 0; i < gridWidth * gridHeight; i++)
+                {
+                    byte r = (byte)(255f - MathF.Max(0f, MathF.Min(simDrawData.InkR[i] * 255f, 255f)));
+                    byte g = (byte)(255f - MathF.Max(0f, MathF.Min(simDrawData.InkG[i] * 255f, 255f)));
+                    byte b = (byte)(255f - MathF.Max(0f, MathF.Min(simDrawData.InkB[i] * 255f, 255f)));
+
+                    pixels[i] = new Color(r, g, b, (byte)255);
+                }
+
+                fixed (Color* ptr = pixels)
+                    Raylib.UpdateTexture(densityTex, ptr);
+            }
+
+            Raylib.DrawTexturePro(
+                densityTex,
+                new Rectangle(0, 0, gridWidth, gridHeight),
+                new Rectangle(0, 0, screenWidth, screenHeight),
+                Vector2.Zero,
+                0f,
+                Color.White
+            );
+
+            if (ShowVelocityVectors)
+                foreach (CellDrawData cellData in cellDrawDatas)
             {
                 Vector2 pos = (cellData.Position + _offSet) * cellSize;
-                DrawDye(pos, cellData.ink);
-                DrawDivergence(pos, cellData.Divergence);
-                if (ShowVelocityVectors) DrawCellVelocity(pos, cellData.CellVelocity);
+                //DrawDye(pos, Vector3.One - cellData.Ink);
+                //DrawDivergence(pos, cellData.Divergence);
+                 DrawCellVelocity(pos, cellData.CellVelocity, cellData.Vorticity);
                 //DrawIndex(pos, cellData.Position);
                 //if (cellData.Type == CellType.Solid)
                 //{
                 //DrawSquareCell(pos);
                 //}
             }
+
+            // --- for velocities on faces ---
             //for (int i = 0; i <= gridWidth; i++)
             //{
             //    for (int j = 0; j < gridHeight; j++)
@@ -73,12 +132,12 @@ namespace CustomEulerianFluidSimulation
             int d = 40;
             void Stat(string label, float val)
             {
-                Raylib.DrawText($"{label}: {val:E3}", 10, d, 16, Raylib_cs.Color.White);
-                d += 40;
+                Raylib.DrawText($"{label}: {val:E1}", 10, d, 16, Raylib_cs.Color.White);
+                d += 25;
             }
-            Raylib.DrawRectangle(0, 0, 180, 40 + 40 * 6, new Raylib_cs.Color(0, 0, 0, 0.75f));
+            Raylib.DrawRectangle(0, 0, 160, 40 + 25 * 6, new Raylib_cs.Color(0, 0, 0, 0.5f));
             Stat("steps", steps);
-            Stat("dt", data.dt);
+            Stat("dt", data.Dt);
             Stat("Max|u,v|", data.MaxSpeed);
             Stat("MinDiv", data.MinDivergence);
             Stat("MaxDiv", data.MaxDivergence);
@@ -140,6 +199,27 @@ namespace CustomEulerianFluidSimulation
             color.A = (byte)(0.2f * 255);
             Raylib.DrawRectangle((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, color);
         }
+        private Raylib_cs.Color ComputeVorticityColor(float omega)
+        {
+            const float scale = 0.1f;
+            float mag = MathF.Abs(omega);
+            float a = MathF.Tanh(mag / scale);
+            float hue = (omega >= 0f) ? 300f : 190f;
+            //float hue = 55f;
+            float sat = 1f - (0.15f + 0.85f * a);
+            float val = 1f - (0.10f + 0.90f * a);
+
+            if (mag <= eps)
+            {
+                sat = 0.0f;
+                val = 0.10f;
+                hue = 0f;
+            }
+
+            Raylib_cs.Color color = Raylib.ColorFromHSV(hue, sat, val);
+            color.A = (byte)(0.5f * 255);
+            return color;
+        }
         private void DrawSquareCell(Vector2 pos)
         {
             Raylib.DrawRectangleLines((int)pos.X, (int)pos.Y, (int)cellSize, (int)cellSize, new Raylib_cs.Color(1, 1, 1, 0.1f));
@@ -160,8 +240,9 @@ namespace CustomEulerianFluidSimulation
                             (int)(pos.Y + velocity * scale),
                             velocity < 0 ? Raylib_cs.Color.White : Raylib_cs.Color.Black);
         }
-        private void DrawCellVelocity(Vector2 pos, Vector2 velocity)
+        private void DrawCellVelocity(Vector2 pos, Vector2 velocity, float vorticity)
         {
+
             int scale = 10;
             int offset = (int)(cellSize / 2);
             pos += new Vector2(offset, offset);
@@ -172,7 +253,31 @@ namespace CustomEulerianFluidSimulation
             Raylib.DrawLineEx(pos,
                             endPos,
                             2f,
-                            Raylib_cs.Color.SkyBlue);
+                            ComputeVorticityColor(vorticity));
+        }
+
+        public void StartRecording()
+        {
+            if (isRecording) return;
+            string projectFolder = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\..\"));
+            string outputPath = Path.Combine(projectFolder, "simulation.mp4");
+            writer = new SimulationVideoWriter(outputPath, gridWidth, gridHeight, (int)cellSize);
+            isRecording = true;
+            Console.WriteLine("Started recording simulation video.");
+        }
+
+        public void FinishRecording()
+        {
+            if (!isRecording) return;
+            writer?.Dispose();
+            writer = null;
+            isRecording = false;
+            Console.WriteLine("Finished recording simulation video.");
+        }
+        public void FinishDrawing()
+        {
+            // --- Cleanup ---
+            Raylib.UnloadTexture(densityTex);
         }
     }
 }

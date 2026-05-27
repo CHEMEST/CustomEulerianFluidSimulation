@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -15,13 +16,16 @@ namespace CustomEulerianFluidSimulation
     // ffmpeg -framerate 60 -i bin/Debug/net8.0/frame_%05d.png -c:v libx264 -pix_fmt yuv420p output.mp4
     // to delete the frames after making a video (don't forget to do this before pushing to git).
     // del frame_*.png 
+
+    // for 128x128: (640x640 / 5x5) = 128x128
     class App
     {
         // Core Constants
-        private const int WindowWidth = 960;
-        private const int WindowHeight = 960;
+        private const float scale = 1.75f;
+        private const int WindowWidth = (int)(512 * scale);
+        private const int WindowHeight = (int)(512 * scale);
         // Simulation Values
-        private const int cellSize = 15;
+        private const int cellSize = 6;
         private readonly EulerianSimulation simulation;
         private readonly Drawer drawer;
         private static int steps = 0;
@@ -30,13 +34,14 @@ namespace CustomEulerianFluidSimulation
 
         private static bool recording = false;
         private static int recordedFrame = 0;
-       
-        public App()
+
+
+    public App()
         {
-            int gridWidth = (WindowWidth / cellSize) - 1;
-            int gridHeight = (WindowHeight / cellSize) - 1;
+            int gridWidth = (WindowWidth / cellSize);
+            int gridHeight = (WindowHeight / cellSize);
             simulation = new EulerianSimulation(gridWidth, gridHeight);
-            drawer = new Drawer(cellSize, gridWidth, gridHeight);
+            drawer = new Drawer(cellSize, gridWidth, gridHeight, WindowWidth, WindowHeight);
         }
 
         public void Draw()
@@ -65,19 +70,35 @@ namespace CustomEulerianFluidSimulation
                 {
                     app.simulation.ResetSim();
                     steps = 0;
-                }else if (Raylib.IsKeyPressed(KeyboardKey.Space))
+                    Console.WriteLine("Simulation Reset");
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.Space))
                 {
                     simulating = !simulating;
-                }else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
+                    Console.WriteLine(simulating ? "Simulating" : "Paused");
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.Enter))
                 {
                     app.Update();
-                }else if (Raylib.IsKeyPressed(KeyboardKey.I))
+                }else if (Raylib.IsKeyPressed(KeyboardKey.U))
                 {
                     app.simulation.InjectAndPerturbRed();
-                }else if (Raylib.IsKeyPressed(KeyboardKey.K))
+                    Console.WriteLine("Injected Red");
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.I))
+                {
+                    app.simulation.InjectAndPerturbGreen();
+                    Console.WriteLine("Injected Green");
+                }else if (Raylib.IsKeyPressed(KeyboardKey.O))
                 {
                     app.simulation.InjectAndPerturbBlue();
-                }else if (Raylib.IsKeyPressed(KeyboardKey.V))
+                    Console.WriteLine("Injected Blue");
+                }else if (Raylib.IsKeyPressed(KeyboardKey.P))
+                {
+                    app.simulation.PerturbVelocity();
+                    Console.WriteLine("Perturbed Velocity");
+                }
+                else if (Raylib.IsKeyPressed(KeyboardKey.V))
                 {
                     app.drawer.ShowVelocityVectors = !app.drawer.ShowVelocityVectors;
                 }else if (Raylib.IsKeyPressed(KeyboardKey.LeftShift))
@@ -85,16 +106,18 @@ namespace CustomEulerianFluidSimulation
                     app.slowDown = !app.slowDown;
                     Raylib.SetTargetFPS(app.slowDown ? 10 : 60);
                 }
-                else if (Raylib.IsKeyPressed(KeyboardKey.T))
+                else if (Raylib.IsKeyPressed(KeyboardKey.Backslash))
                 {
                     recording = !recording;
-                    Console.WriteLine($"Recording: {recording}");
+
+                    if (recording == true) app.drawer.StartRecording();
+                    else app.drawer.FinishRecording();
                 }
 
 
                 // --- Draw ---
                 Raylib.BeginDrawing();
-                Raylib.ClearBackground(Raylib_cs.Color.DarkGray);
+                Raylib.ClearBackground(Color.DarkGray);
 
                 app.Draw();
 
@@ -103,10 +126,11 @@ namespace CustomEulerianFluidSimulation
 
                 if (recording)
                 {
-                    Image frame = Raylib.LoadImageFromScreen();
-                    Raylib.ExportImage(frame, $"frame_{recordedFrame:D5}.png");
-                    Raylib.UnloadImage(frame);
-                    recordedFrame++;
+                    //Image frame = Raylib.LoadImageFromScreen();
+                    //Raylib.ExportImage(frame, $"frame_{recordedFrame:D5}.png");
+                    //Raylib.UnloadImage(frame);
+                    app.drawer.WriteFrameData(app.simulation.GetCellDrawData());
+                    Console.WriteLine( recordedFrame++ );
                 }
 
             }

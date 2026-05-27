@@ -20,13 +20,19 @@ namespace CustomEulerianFluidSimulation
         public float MaxDivergence { get; init; }
         public float MaxSpeed { get; init; }
         public float MinSpeed { get; init; }
-        public float dt { get; init; }
+        public float Dt { get; init; }
+        public float[] InkR { get; init; }
+        public float[] InkG { get; init; }
+        public float[] InkB { get; init; }
+
 
     }
     record CellDrawData
     {
+        public float Vorticity { get; init; }
+
         public float Divergence { get; init; }
-        public Vector3 ink { get; init; }
+        public Vector3 Ink { get; init; }
 
         public Vector2 CellVelocity { get; init; }
         public CellType Type { get; init; }
