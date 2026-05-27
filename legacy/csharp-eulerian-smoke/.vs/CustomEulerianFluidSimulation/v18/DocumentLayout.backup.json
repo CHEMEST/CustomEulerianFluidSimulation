@@ -1,0 +1,126 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\app.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:app.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\customeulerianfluidsimulation.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:customeulerianfluidsimulation.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\simulation-inverted.mp4||{25834150-CD7E-11D0-92DF-00A0C9138C45}",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:simulation-inverted.mp4||{25834150-CD7E-11D0-92DF-00A0C9138C45}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\eulerian simulation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:eulerian simulation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\drawdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:drawdata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|c:\\users\\cheme\\onedrive\\desktop\\codeandassets\\code\\cpp\\iguazu\\legacy-csharp-eulerian-smoke\\drawer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{039A18EC-6572-4D7F-9745-9835511A27AC}|CustomEulerianFluidSimulation.csproj|solutionrelative:drawer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "App.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\App.cs",
+              "RelativeDocumentMoniker": "App.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\App.cs",
+              "RelativeToolTip": "App.cs",
+              "ViewState": "AgIAACcAAAAAAAAAAAAQwBQAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:38:54.489Z",
+              "IsPinned": true,
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "CustomEulerianFluidSimulation.csproj",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\CustomEulerianFluidSimulation.csproj",
+              "RelativeDocumentMoniker": "CustomEulerianFluidSimulation.csproj",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\CustomEulerianFluidSimulation.csproj",
+              "RelativeToolTip": "CustomEulerianFluidSimulation.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAQAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-05-27T05:42:52.107Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "simulation-inverted.mp4",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\simulation-inverted.mp4",
+              "RelativeDocumentMoniker": "simulation-inverted.mp4",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\simulation-inverted.mp4",
+              "RelativeToolTip": "simulation-inverted.mp4",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001836|",
+              "WhenOpened": "2026-05-27T04:56:10.007Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Eulerian Simulation.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\Eulerian Simulation.cs",
+              "RelativeDocumentMoniker": "Eulerian Simulation.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\Eulerian Simulation.cs",
+              "RelativeToolTip": "Eulerian Simulation.cs",
+              "ViewState": "AgIAAB4BAAAApkQSvcQqwCsBAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:38:54.538Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Drawer.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\Drawer.cs",
+              "RelativeDocumentMoniker": "Drawer.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\Drawer.cs",
+              "RelativeToolTip": "Drawer.cs",
+              "ViewState": "AgIAADgAAAAAAAAAAAAUwEQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:38:54.552Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "DrawData.cs",
+              "DocumentMoniker": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\DrawData.cs",
+              "RelativeDocumentMoniker": "DrawData.cs",
+              "ToolTip": "C:\\Users\\cheme\\OneDrive\\Desktop\\CodeAndAssets\\Code\\Cpp\\iguazu\\legacy-csharp-eulerian-smoke\\DrawData.cs",
+              "RelativeToolTip": "DrawData.cs",
+              "ViewState": "AgIAAAkAAAAAAAAAAAA8wBEAAAAsAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-04-29T04:38:54.555Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
