@@ -24,7 +24,7 @@ The project began as a learning exercise — implementing every component from f
 
 **Discretization.** Staggered MAC grid with horizontal velocity `u` stored on vertical cell faces and vertical velocity `v` stored on horizontal cell faces. Pressure, divergence, and scalar (dye) fields are stored at cell centers. Grid dimensions are `Nx × Ny`; velocity arrays are sized `(Nx+1) × Ny` and `Nx × (Ny+1)` respectively.
 
-**Time integration.** Adaptive timestep computed from the CFL condition with a configurable safety factor (default 0.7, conservative for Shu-Osher RK3 which is stable up to CFL = 1.0).
+**Time integration.** Adaptive timestep computed from the CFL condition with a configurable safety factor (default 0.7, conservative for Shu-Osher RK3 which is unconditionally stable but better when less than CFL = 1.0 to keep backtracing within each cell).
 
 **Pipeline per step:**
 
@@ -48,8 +48,8 @@ The solver implements multiple advection schemes that can be swapped in the upda
 | --- | --- | --- |
 | **RK1 semi-Lagrangian** | First-order Euler backtrace, bilinear interpolation at the foot point. | O(h) in space, O(dt) in time |
 | **RK3 semi-Lagrangian** | Shu-Osher TVD RK3 for the characteristic backtrace, bilinear interpolation. | O(h) in space, O(dt³) in time |
-| **RK1 BFECC** | Back-and-Forth Error Compensation and Correction using RK1 substeps, with Kim et al. local extrema limiter (clamp to neighborhood min/max). | Approaches O(h²) in smooth regions |
-| **RK3 BFECC** | BFECC with Shu-Osher RK3 substeps and the same local extrema limiter. | Approaches O(h²) in smooth regions, higher-order temporal accuracy |
+| **RK1 BFECC** | Back-and-Forth Error Compensation and Correction using RK1 substeps, with Kim et al. local extrema limiter (clamp to neighborhood min/max). | Approaches O(h²) in smooth regions where the limiter does not trigger |
+| **RK3 BFECC** | BFECC with Shu-Osher RK3 substeps and the same local extrema limiter. | Approaches O(h²) in smooth regions where the limiter does not trigger, higher-order temporal accuracy |
 
 BFECC (Dupont & Liu 2003; Kim et al. 2005 in graphics) performs a forward advection, a backward advection, estimates the error from the round-trip, applies a half-error correction to the initial field, and re-advects. The local extrema limiter clamps the result to the min/max of the source neighborhood to suppress new extrema and overshoots that pure BFECC can introduce.
 
@@ -93,15 +93,16 @@ Rendered with [Raylib-cs](https://github.com/raylib-cs/raylib-cs). The Drawer mo
 
 Single-threaded C# implementation on CPU with RK1 BFECC and SOR. Measured on a `Ryzen 5 5600H`:
 
-| Grid size | Cells | Approx. FPS (+- ~2) |
-| --- | --- | --- |
-| 128 × 128 | 16,384 | 50 |
-| 192 × 192 | 36,864 | 25 |
-| 256 × 256 | 65,536 | 13 |
-| 512 × 512 | 147,456 | 3 |
+| Grid size | Cells | Approx. FPS (+- ~2) | µs/cell |
+| --- | --- | --- | --- |
+| 128 × 128 | 16,384 | 50 | 1.22 |
+| 192 × 192 | 36,864 | 25 | 1.09 |
+| 256 × 256 | 65,536 | 13 | 1.17 |
+| 512 × 512 | 262,144 | 3 | 1.27 |
 
 The pressure solve (SOR) and BFECC advection are the two dominant costs. Profiling indicates SOR is the larger of the two at default iteration counts. The C++ rewrite targets these directly via a CG solver (later multigrid) and SIMD-friendly memory layouts, with a GPU port planned for the divergence and Poisson solves.
 
+On 128x128, the sim takes ~40 steps to get max divergence ~= 1e-3 at default SOR iterations
 ## Controls
 
 | Key | Action |
@@ -109,9 +110,9 @@ The pressure solve (SOR) and BFECC advection are the two dominant costs. Profili
 | `Space` | Pause / resume simulation |
 | `Enter` | Single-step (advance one frame while paused) |
 | `R` | Reset simulation |
-| `U` | Inject red dye (random density per cell, random size) and perturb it (randomly varying velocity magnitude towards bottom right)
-| `I` | Inject green dye (random density/size), no perturbation
-| `O` | Inject blue dye (density = 1), no perturbation
+| `U` | Inject red dye (random density per cell, random size) and perturb it (randomly varying velocity magnitude towards bottom right) |
+| `I` | Inject green dye (random density/size), no perturbation |
+| `O` | Inject blue dye (density = 1), no perturbation |
 | `P` | Perturb velocity field (thickness of 3 streaks originating at boundaries) |
 | `V` | Toggle velocity vector overlay |
 | `Left Shift` | Toggle slow-motion playback (10 vs 60 FPS) |
