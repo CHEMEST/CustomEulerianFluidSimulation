@@ -24,7 +24,7 @@ The project began as a learning exercise — implementing every component from f
 
 **Discretization.** Staggered MAC grid with horizontal velocity `u` stored on vertical cell faces and vertical velocity `v` stored on horizontal cell faces. Pressure, divergence, and scalar (dye) fields are stored at cell centers. Grid dimensions are `Nx × Ny`; velocity arrays are sized `(Nx+1) × Ny` and `Nx × (Ny+1)` respectively.
 
-**Time integration.** Adaptive timestep computed from the CFL condition with a configurable safety factor (default 0.7, conservative for Shu-Osher RK3 which is unconditionally stable but better when less than CFL = 1.0 to keep backtracing within each cell).
+**Time integration.** Adaptive timestep computed from the CFL condition with a configurable safety factor (default 0.7; semi-lagrangian advection is unconditionally stable but Shu-Osher RK3 works better when CFL < 1.0 to keep backtracing within each cell).
 
 **Pipeline per step:**
 
