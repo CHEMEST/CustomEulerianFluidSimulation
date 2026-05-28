@@ -131,7 +131,6 @@ dotnet run -c Release
 ## Known limitations
 
 - **Inviscid only.** No explicit viscous stress term. Effective dissipation is numerical and depends on advection scheme and grid resolution. A FLIP/PIC blending parameter mapped to a viscosity-like coefficient is on the Iguazu roadmap (the C++ rewrite), not implemented here.
-- **No free surface.** This is a single-fluid smoke solver. Free-surface tracking is part of the FLIP milestone in the next-generation solver.
 - **Solid boundaries limited to walls.** No SDF-based solids yet; planned for the rewrite.
 - **`ApplyBodyForces` (gravity) is disabled** in the active update loop. The current implementation interacts poorly with boundary handling and zeros the field after roughly 50 frames once advected material reaches the lower wall. Smoke does not require gravity in any case, but this is documented as a known bug rather than a feature.
 - **Pressure solve termination is by iteration count, not residual tolerance.** At ω = 1.95 the visible flow stabilizes quickly, but the true L2 residual is not driven to a fixed tolerance. Residual-versus-iteration plotting is planned but not yet wired into the visualization.
