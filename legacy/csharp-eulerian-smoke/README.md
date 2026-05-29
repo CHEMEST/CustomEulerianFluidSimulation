@@ -67,7 +67,7 @@ Three independent scalar fields (R, G, B) advected with the chosen scheme. Used 
 
 ### Boundary handling
 
-Solid cells are marked in a per-cell `CellType` array. Boundary enforcement zeros normal velocity components on solid faces and sets tangential components to satisfy no-slip. Currently boundaries are limited to the domain walls; arbitrary solids via SDF are planned for the C++ rewrite.
+Solid cells are marked in a per-cell `CellType` array. Boundary enforcement zeros normal velocity components on solid faces to satisfy free-slip (since this is an inviscid sim). Currently boundaries are limited to the domain walls; arbitrary solids via SDF are planned for the C++ rewrite.
 
 ### Diagnostics
 
